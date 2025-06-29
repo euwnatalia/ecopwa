@@ -1,0 +1,169 @@
+.sidebar {
+  width: 250px !important;
+  height: 100vh !important;
+  background-color: #2E7D32;
+  color: white;
+  padding: 1.5rem;
+  box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 100 !important; /* Reducido para evitar conflictos con modales */
+  transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  max-width: 250px !important;
+  min-width: 250px !important;
+}
+
+.sidebar.mobile-hidden {
+  transform: translateX(-100%) !important;
+}
+
+.sidebar h2 {
+  margin-bottom: 2rem;
+  font-size: 1.4rem;
+  text-align: center;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar li {
+  margin: 1rem 0;
+}
+
+.sidebar a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  display: block;
+  padding: 0.75rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.sidebar a:hover {
+  background-color: rgba(255,255,255,0.1);
+  color: #a5d6a7;
+}
+
+.sidebar a.active {
+  background-color: rgba(255,255,255,0.2);
+  color: #c8e6c9;
+}
+
+/* Botón hamburguesa para mobile */
+.mobile-menu-toggle {
+  display: none;
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 101; /* Por encima del sidebar */
+  background: #2E7D32;
+  color: white;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.mobile-menu-toggle:hover {
+  background: #1b5e20;
+}
+
+/* Overlay para cerrar el sidebar en mobile */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 99; /* Por debajo del sidebar */
+}
+
+.sidebar-overlay.active {
+  display: block;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 280px;
+    transform: translateX(-100%);
+  }
+  
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  
+  .mobile-menu-toggle {
+    display: block;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    width: 90vw;
+    max-width: 300px;
+  }
+  
+  .sidebar h2 {
+    font-size: 1.2rem;
+  }
+  
+  .sidebar a {
+    padding: 1rem;
+    font-size: 1.1rem;
+  }
+}
+
+/* Botón de instalación PWA */
+.pwa-install {
+  margin-top: auto;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255,255,255,0.2);
+}
+
+.install-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #FF9800, #F57C00);
+  color: white;
+  border: none;
+  padding: 1rem;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+}
+
+.install-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 152, 0, 0.4);
+  background: linear-gradient(135deg, #F57C00, #E65100);
+}
+
+.install-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .pwa-install {
+    padding-top: 1.5rem;
+  }
+  
+  .install-btn {
+    padding: 0.9rem;
+    font-size: 0.95rem;
+  }
+}
+
+/* Layout del dashboard se maneja completamente en Dashboard.css */

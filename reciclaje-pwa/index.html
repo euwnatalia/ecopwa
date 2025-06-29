@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Título y descripción -->
+    <title>♻️ EcoPWA - Aplicación de Reciclaje</title>
+    <meta name="description" content="Aplicación para registrar reciclajes, encontrar puntos de reciclaje y obtener logros ecológicos" />
+    <meta name="keywords" content="reciclaje, ecología, medio ambiente, PWA, aplicación web" />
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#2E7D32" />
+    <meta name="background-color" content="#F5F5F5" />
+    
+    <!-- Mobile optimizations -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="EcoPWA" />
+    
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144x144.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-128x128.png" />
+    
+    <!-- Microsoft Tiles -->
+    <meta name="msapplication-TileColor" content="#2E7D32" />
+    <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="EcoPWA - Aplicación de Reciclaje" />
+    <meta property="og:description" content="Aplicación para registrar reciclajes, encontrar puntos de reciclaje y obtener logros ecológicos" />
+    <meta property="og:image" content="/icons/icon-512x512.png" />
+    <meta property="og:locale" content="es_AR" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="EcoPWA - Aplicación de Reciclaje" />
+    <meta name="twitter:description" content="Aplicación para registrar reciclajes, encontrar puntos de reciclaje y obtener logros ecológicos" />
+    <meta name="twitter:image" content="/icons/icon-512x512.png" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      // Registrar Service Worker para PWA
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('✅ Service Worker registrado:', registration);
+              
+              // Verificar actualizaciones cada 60 segundos
+              setInterval(() => {
+                registration.update();
+              }, 60000);
+              
+              // Notificar al usuario si hay una actualización disponible
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('📱 Nueva versión disponible');
+                    // Opcional: mostrar notificación de actualización
+                    if (confirm('Nueva versión disponible. ¿Actualizar ahora?')) {
+                      newWorker.postMessage({ type: 'SKIP_WAITING' });
+                      window.location.reload();
+                    }
+                  }
+                });
+              });
+            })
+            .catch((error) => {
+              console.log('❌ Error registrando Service Worker:', error);
+            });
+        });
+      }
+      
+      // Detectar instalación de PWA
+      let deferredPrompt;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        console.log('📱 PWA instalable detectada');
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Opcional: mostrar botón de instalación personalizado
+        // showInstallButton();
+      });
+      
+      // Función para mostrar prompt de instalación
+      window.installPWA = () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+              console.log('✅ PWA instalada por el usuario');
+            } else {
+              console.log('❌ Usuario rechazó la instalación');
+            }
+            deferredPrompt = null;
+          });
+        }
+      };
+      
+      // Detectar cuando se instala la PWA
+      window.addEventListener('appinstalled', () => {
+        console.log('🎉 PWA instalada exitosamente');
+        deferredPrompt = null;
+      });
+    </script>
+  </body>
+</html>

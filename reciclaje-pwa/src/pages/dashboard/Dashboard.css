@@ -1,0 +1,41 @@
+/* Layout limpio y sin conflictos para el Dashboard */
+.dashboard-container {
+  display: flex;
+  min-height: 100vh;
+  font-family: 'Roboto', sans-serif;
+  position: relative;
+}
+
+.dashboard-main {
+  flex: 1;
+  margin-left: 250px;
+  padding: 2rem;
+  background-color: #f4f4f4;
+  min-height: 100vh;
+  width: calc(100vw - 250px);
+  box-sizing: border-box;
+  overflow-x: auto;
+}
+
+/* Asegurar que el contenido no se superponga */
+.dashboard-main > * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .dashboard-main {
+    margin-left: 0;
+    width: 100vw;
+    padding: 1rem;
+    padding-top: 4rem; /* Espacio para el botón hamburguesa */
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-main {
+    padding: 0.75rem;
+    padding-top: 4rem;
+  }
+}

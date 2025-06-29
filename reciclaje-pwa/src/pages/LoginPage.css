@@ -1,0 +1,132 @@
+.login-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw; 
+    font-family: 'Roboto', sans-serif;
+  }
+  
+  /* Panel Izquierdo */
+  .login-left-panel {
+    flex: 0 0 40%;
+    background-color: #2E7D32;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+  }
+  
+  .login-content {
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+  }
+  
+  /* Panel Derecho */
+  .login-right-panel {
+    flex: 1;
+    background: #F5F5F5;
+    padding: 4rem 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+  }
+  
+  .login-info {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  
+  .login-info h2 {
+    margin-bottom: 0.5rem;
+    font-size: 1.8rem;
+    font-family: 'Poppins', sans-serif;
+  }
+  
+  .login-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Las tarjetas se acomodan */
+    gap: 2rem;
+    width: 100%;
+    padding: 2rem;
+  }
+  
+  .card {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+  
+  .card h3 {
+    margin-bottom: 0.75rem;
+    color: #2E7D32;
+    font-size: 1.4rem;
+  }
+  
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .login-left-panel {
+      flex: 0 0 35%;
+    }
+    
+    .login-options {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .login-container {
+      flex-direction: column;
+      height: auto;
+      min-height: 100vh;
+    }
+  
+    .login-left-panel {
+      flex: none;
+      width: 100%;
+      padding: 2rem 1rem;
+      min-height: 200px;
+    }
+    
+    .login-right-panel {
+      flex: none;
+      width: 100%;
+      padding: 2rem 1rem;
+    }
+  
+    .login-options {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    
+    .card {
+      padding: 1.5rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .login-left-panel, .login-right-panel {
+      padding: 1.5rem 0.75rem;
+    }
+    
+    .login-info h2 {
+      font-size: 1.5rem;
+    }
+    
+    .login-options {
+      padding: 1rem;
+    }
+    
+    .card {
+      padding: 1rem;
+    }
+    
+    .card h3 {
+      font-size: 1.2rem;
+    }
+  }
+  
