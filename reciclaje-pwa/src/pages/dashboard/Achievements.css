@@ -63,6 +63,26 @@
   box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
 }
 
+.nav-btn.highlight {
+  animation: highlightPulse 2s ease-in-out;
+  box-shadow: 0 4px 20px rgba(46, 125, 50, 0.6) !important;
+}
+
+@keyframes highlightPulse {
+  0% { 
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 6px 25px rgba(46, 125, 50, 0.8);
+    transform: scale(1.05);
+  }
+  100% { 
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+    transform: scale(1);
+  }
+}
+
 /* Estados de carga */
 .loading-state, .error-state, .empty-state {
   display: flex;

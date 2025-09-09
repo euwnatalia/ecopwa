@@ -1,15 +1,35 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import "./Achievements.css";
 
 function Achievements() {
+  const location = useLocation();
+  const initialTab = location.state?.initialTab || "resumen";
+  
   const [historial, setHistorial] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [vistaActual, setVistaActual] = useState("resumen"); // resumen, historial, logros
+  const [vistaActual, setVistaActual] = useState(initialTab); // resumen, historial, logros
+  const [highlightTab, setHighlightTab] = useState(false);
 
   useEffect(() => {
     cargarHistorial();
   }, []);
+
+  // Actualizar la vista cuando cambien los parámetros de navegación
+  useEffect(() => {
+    if (location.state?.initialTab) {
+      setVistaActual(location.state.initialTab);
+      setHighlightTab(true);
+      
+      // Remover el highlight después de 2 segundos
+      const timer = setTimeout(() => {
+        setHighlightTab(false);
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [location.state]);
 
   const cargarHistorial = async () => {
     setLoading(true);
@@ -127,19 +147,19 @@ function Achievements() {
         
         <nav className="achievements-nav">
           <button 
-            className={`nav-btn ${vistaActual === 'resumen' ? 'active' : ''}`}
+            className={`nav-btn ${vistaActual === 'resumen' ? 'active' : ''} ${highlightTab && vistaActual === 'resumen' ? 'highlight' : ''}`}
             onClick={() => setVistaActual('resumen')}
           >
             📊 Resumen
           </button>
           <button 
-            className={`nav-btn ${vistaActual === 'historial' ? 'active' : ''}`}
+            className={`nav-btn ${vistaActual === 'historial' ? 'active' : ''} ${highlightTab && vistaActual === 'historial' ? 'highlight' : ''}`}
             onClick={() => setVistaActual('historial')}
           >
             📝 Historial
           </button>
           <button 
-            className={`nav-btn ${vistaActual === 'logros' ? 'active' : ''}`}
+            className={`nav-btn ${vistaActual === 'logros' ? 'active' : ''} ${highlightTab && vistaActual === 'logros' ? 'highlight' : ''}`}
             onClick={() => setVistaActual('logros')}
           >
             🎖️ Logros

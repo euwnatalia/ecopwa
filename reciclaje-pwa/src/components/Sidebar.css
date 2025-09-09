@@ -1,10 +1,10 @@
 .sidebar {
   width: 250px !important;
   height: 100vh !important;
-  background-color: #2E7D32;
+  background: linear-gradient(135deg, #388E3C 80%, #2E7D32 100%);
   color: white;
   padding: 1.5rem;
-  box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+  box-shadow: 4px 0 24px rgba(56,142,60,0.15);
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
@@ -14,6 +14,7 @@
   flex-direction: column;
   max-width: 250px !important;
   min-width: 250px !important;
+  font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
 }
 
 .sidebar.mobile-hidden {
@@ -21,38 +22,64 @@
 }
 
 .sidebar h2 {
-  margin-bottom: 2rem;
-  font-size: 1.4rem;
-  text-align: center;
+  margin-bottom: 2.2rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-logo {
+  margin-left: 0.5rem;
+  font-size: 1.3em;
 }
 
 .sidebar ul {
   list-style: none;
   padding: 0;
+  margin-top: 0.5rem;
 }
 
 .sidebar li {
-  margin: 1rem 0;
+  margin: 1.1rem 0;
 }
 
 .sidebar a {
   color: white;
   text-decoration: none;
-  font-weight: bold;
-  display: block;
-  padding: 0.75rem;
-  border-radius: 8px;
-  transition: all 0.3s ease;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-size: 1.08rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: transparent;
+  transition: background 0.25s, color 0.25s, transform 0.18s;
 }
 
-.sidebar a:hover {
-  background-color: rgba(255,255,255,0.1);
-  color: #a5d6a7;
+.sidebar a .sidebar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 7px;
+  transition: background 0.2s;
 }
 
-.sidebar a.active {
-  background-color: rgba(255,255,255,0.2);
-  color: #c8e6c9;
+.sidebar a:hover, .sidebar a.active {
+  background: rgba(255,255,255,0.13);
+  color: #A5D6A7;
+  transform: translateX(4px) scale(1.03);
+}
+
+.sidebar a:hover .sidebar-icon, .sidebar a.active .sidebar-icon {
+  background: #A5D6A7;
 }
 
 /* Botón hamburguesa para mobile */
@@ -132,23 +159,26 @@
 }
 
 .install-btn {
-  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  justify-content: center;
+  font-size: 1.08rem;
+  padding: 1rem 0.5rem;
+  border-radius: 12px;
+  font-weight: 600;
   background: linear-gradient(135deg, #FF9800, #F57C00);
   color: white;
   border: none;
-  padding: 1rem;
-  border-radius: 12px;
-  font-weight: bold;
-  font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
 }
 
 .install-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(255, 152, 0, 0.4);
   background: linear-gradient(135deg, #F57C00, #E65100);
+  color: #fffde7;
+  transform: scale(1.04);
 }
 
 .install-btn:active {
@@ -163,6 +193,17 @@
   .install-btn {
     padding: 0.9rem;
     font-size: 0.95rem;
+  }
+}
+
+/* Responsive mejoras */
+@media (max-width: 768px) {
+  .sidebar h2 {
+    font-size: 1.2rem;
+  }
+  .sidebar a {
+    font-size: 1rem;
+    padding: 0.8rem 0.7rem;
   }
 }
 
