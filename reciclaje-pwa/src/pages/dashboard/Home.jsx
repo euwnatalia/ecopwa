@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { userService } from "../../services/userService";
 import "./Home.css";
 
-function Home() {
+function Home({ userDetails }) {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState(null);

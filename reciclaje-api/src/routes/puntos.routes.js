@@ -9,6 +9,9 @@ const {
   reactivarPunto 
 } = require('../controllers/puntos.controller');
 
+// GET /api/puntos/publicos — versión pública sin autenticación para la página de login
+router.get('/publicos', getPuntos);
+
 // GET /api/puntos — devuelve todos los puntos ordenados por distancia
 // Parámetros opcionales: tipo, lat, lng, radio, incluirInactivos
 router.get('/', verifyToken, getPuntos);

@@ -2,12 +2,12 @@ const express = require('express');
 const { body } = require('express-validator');
 const router = express.Router();
 
-const { getUsers, createUser } = require('../controllers/usuarios.controller');
+const { getUsers, createUser, getUserByUid } = require('../controllers/usuarios.controller');
 const validate   = require('../middlewares/validation');
 const verifyToken = require('../middlewares/auth');   // <— ¡IMPORTAR AQUÍ!
 
 // GET /api/usuarios
-router.get('/', getUsers);
+router.get('/', verifyToken, getUserByUid);
 
 // POST /api/usuarios con validaciones
 router.post(
@@ -20,6 +20,9 @@ router.post(
   validate,
   createUser
 );
+
+// GET /api/usuarios/all (para administradores)
+router.get('/all', getUsers);
 
 // GET /api/usuarios/me
 router.get('/me', verifyToken, (req, res) => {

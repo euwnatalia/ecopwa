@@ -389,6 +389,47 @@
   margin-bottom: 0.5rem;
 }
 
+/* Impacto ambiental para comercios */
+.impact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.impact-item {
+  background: linear-gradient(135deg, #E8F5E8, #F1F8E9);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  border: 2px solid #A5D6A7;
+  transition: all 0.3s ease;
+}
+
+.impact-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(46, 125, 50, 0.15);
+}
+
+.impact-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.impact-info strong {
+  display: block;
+  font-size: 1.8rem;
+  color: #2E7D32;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.impact-info span {
+  color: #666;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
 .historial-punto, .historial-puntos, .historial-distancia {
   font-size: 0.9rem;
   color: #666;

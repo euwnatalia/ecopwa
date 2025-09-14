@@ -491,8 +491,200 @@ function calcularMejorRacha(reciclajes) {
   return Math.max(mejorRacha, rachaActual);
 }
 
+// Función para que comercios reciban reciclajes
+async function recibirReciclaje(req, res) {
+  try {
+    const { codigoUsuario, tipo, cantidad, puntos } = req.body;
+    const comercioId = req.user?.uid;
+    
+    if (!comercioId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    if (!codigoUsuario || !tipo || !cantidad || !puntos) {
+      return res.status(400).json({ 
+        error: 'Todos los campos son obligatorios' 
+      });
+    }
+
+    // Buscar usuario por código (puede ser email o uid)
+    let usuarioQuery = db.collection('usuarios').where('email', '==', codigoUsuario);
+    let usuarioSnap = await usuarioQuery.get();
+    
+    if (usuarioSnap.empty) {
+      usuarioQuery = db.collection('usuarios').where('uid', '==', codigoUsuario);
+      usuarioSnap = await usuarioQuery.get();
+    }
+
+    if (usuarioSnap.empty) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const usuario = usuarioSnap.docs[0].data();
+    const userId = usuario.uid;
+
+    // Obtener información del comercio
+    const comercioQuery = await db.collection('usuarios').where('uid', '==', comercioId).get();
+    if (comercioQuery.empty) {
+      return res.status(404).json({ error: 'Comercio no encontrado' });
+    }
+
+    const comercio = comercioQuery.docs[0].data();
+
+    // Crear el reciclaje
+    const reciclaje = {
+      tipo,
+      cantidad: parseFloat(cantidad),
+      puntos: parseInt(puntos),
+      userId,
+      comercioId,
+      usuario: usuario.nombre,
+      comercio: comercio.nombre,
+      fechaCreacion: new Date().toISOString(),
+      estado: 'completado',
+      metodo: 'comercio'
+    };
+
+    const ref = await db.collection('reciclajes').add(reciclaje);
+    
+    res.status(201).json({ 
+      id: ref.id, 
+      ...reciclaje,
+      mensaje: 'Reciclaje procesado exitosamente'
+    });
+
+  } catch (error) {
+    console.error('Error en recibirReciclaje:', error);
+    res.status(500).json({ error: 'Error al procesar el reciclaje' });
+  }
+}
+
+// Obtener reciclajes procesados por un comercio
+async function getReciclajesComercio(req, res) {
+  try {
+    const comercioId = req.user?.uid;
+    
+    if (!comercioId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    const reciclajes = await db.collection('reciclajes')
+      .where('comercioId', '==', comercioId)
+      .orderBy('fechaCreacion', 'desc')
+      .limit(50)
+      .get();
+
+    const lista = reciclajes.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    res.json(lista);
+
+  } catch (error) {
+    console.error('Error en getReciclajesComercio:', error);
+    res.status(500).json({ error: 'Error al obtener reciclajes del comercio' });
+  }
+}
+
+// Obtener estadísticas específicas para comercios
+async function getEstadisticasComercio(req, res) {
+  try {
+    const comercioId = req.user?.uid;
+    
+    if (!comercioId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    // Obtener todos los reciclajes del comercio
+    const reciclajes = await db.collection('reciclajes')
+      .where('comercioId', '==', comercioId)
+      .get();
+
+    const lista = reciclajes.docs.map(doc => doc.data());
+
+    // Calcular estadísticas específicas para comercios
+    const stats = {
+      totalReciclajes: lista.length,
+      pesoTotal: lista.reduce((sum, r) => sum + (r.cantidad || 0), 0),
+      puntosOtorgados: lista.reduce((sum, r) => sum + (r.puntos || 0), 0),
+      usuariosAtendidos: new Set(lista.map(r => r.userId)).size,
+      tiposRecibidos: {},
+      mejorMes: null,
+      impactoAmbiental: {
+        co2Ahorrado: 0, // kg de CO2 ahorrado
+        energiaAhorrada: 0, // kWh ahorrados
+        aguaAhorrada: 0 // litros de agua ahorrados
+      }
+    };
+
+    // Calcular tipos recibidos
+    lista.forEach(reciclaje => {
+      const tipo = reciclaje.tipo;
+      if (tipo) {
+        stats.tiposRecibidos[tipo] = (stats.tiposRecibidos[tipo] || 0) + reciclaje.cantidad;
+      }
+    });
+
+    // Calcular impacto ambiental (valores aproximados)
+    const impactoPorTipo = {
+      'Plástico': { co2: 2.0, energia: 5.5, agua: 15 }, // por kg
+      'Vidrio': { co2: 0.5, energia: 0.8, agua: 2 },
+      'Cartón': { co2: 3.3, energia: 4.2, agua: 25 },
+      'Papel': { co2: 1.5, energia: 3.0, agua: 20 },
+      'Metal': { co2: 4.5, energia: 8.0, agua: 10 }
+    };
+
+    Object.entries(stats.tiposRecibidos).forEach(([tipo, cantidad]) => {
+      const impacto = impactoPorTipo[tipo];
+      if (impacto) {
+        stats.impactoAmbiental.co2Ahorrado += cantidad * impacto.co2;
+        stats.impactoAmbiental.energiaAhorrada += cantidad * impacto.energia;
+        stats.impactoAmbiental.aguaAhorrada += cantidad * impacto.agua;
+      }
+    });
+
+    // Calcular mejor mes
+    const reciclajesPorMes = {};
+    lista.forEach(reciclaje => {
+      const fecha = new Date(reciclaje.fechaCreacion);
+      const mesAno = `${fecha.getFullYear()}-${(fecha.getMonth() + 1).toString().padStart(2, '0')}`;
+      reciclajesPorMes[mesAno] = (reciclajesPorMes[mesAno] || 0) + 1;
+    });
+
+    let maxReciclajes = 0;
+    let mejorMes = null;
+    Object.entries(reciclajesPorMes).forEach(([mes, cantidad]) => {
+      if (cantidad > maxReciclajes) {
+        maxReciclajes = cantidad;
+        mejorMes = mes;
+      }
+    });
+
+    stats.mejorMes = { mes: mejorMes, cantidad: maxReciclajes };
+
+    // Redondear valores de impacto
+    stats.impactoAmbiental.co2Ahorrado = Math.round(stats.impactoAmbiental.co2Ahorrado * 10) / 10;
+    stats.impactoAmbiental.energiaAhorrada = Math.round(stats.impactoAmbiental.energiaAhorrada * 10) / 10;
+    stats.impactoAmbiental.aguaAhorrada = Math.round(stats.impactoAmbiental.aguaAhorrada);
+
+    res.json({
+      estadisticas: stats,
+      reciclajes: lista.slice(0, 10), // Últimos 10 para el dashboard
+      total: lista.length
+    });
+
+  } catch (error) {
+    console.error('Error en getEstadisticasComercio:', error);
+    res.status(500).json({ error: 'Error al obtener estadísticas del comercio' });
+  }
+}
+
 module.exports = { 
   getReciclajes,
   createReciclaje, 
-  getHistorialUsuario 
+  getHistorialUsuario,
+  recibirReciclaje,
+  getReciclajesComercio,
+  getEstadisticasComercio
 };

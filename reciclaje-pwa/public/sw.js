@@ -1,6 +1,7 @@
 // Service Worker para EcoPWA
-const CACHE_NAME = 'ecopwa-v1.0.0';
-const API_CACHE_NAME = 'ecopwa-api-v1.0.0';
+const CACHE_VERSION = Date.now(); // Usar timestamp para forzar actualizaciones
+const CACHE_NAME = `ecopwa-v${CACHE_VERSION}`;
+const API_CACHE_NAME = `ecopwa-api-v${CACHE_VERSION}`;
 
 // Archivos que queremos cachear
 const urlsToCache = [

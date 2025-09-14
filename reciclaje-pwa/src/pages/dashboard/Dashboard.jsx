@@ -2,12 +2,12 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
 import "./Dashboard.css";
 
-function Dashboard() {
+function Dashboard({ userDetails }) {
   return (
     <div className="dashboard-container">
-      <Sidebar />
+      <Sidebar userDetails={userDetails} />
       <div className="dashboard-main">
-        <Outlet />
+        <Outlet context={{ userDetails }} />
       </div>
     </div>
   );

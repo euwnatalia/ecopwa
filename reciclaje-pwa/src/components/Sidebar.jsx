@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import "./Sidebar.css";
 
-function Sidebar() {
+function Sidebar({ userDetails }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
   const location = useLocation();
@@ -57,6 +57,8 @@ function Sidebar() {
     }
   };
 
+  const isComercio = userDetails?.tipo === 'comercio';
+
   return (
     <>
       {/* Botón hamburguesa para mobile */}
@@ -76,7 +78,9 @@ function Sidebar() {
 
       {/* Sidebar */}
       <aside className={`sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
-        <h2>EcoPWA <span className="sidebar-logo">♻️</span></h2>
+        <h2>EcoPWA <span className="sidebar-logo">{isComercio ? '🏪' : '♻️'}</span></h2>
+        {isComercio && <div className="user-type-badge">Comercio</div>}
+        
         <nav>
           <ul>
             <li>
@@ -101,17 +105,37 @@ function Sidebar() {
                 Mapa
               </Link>
             </li>
-            <li>
-              <Link 
-                to="/dashboard/scan"
-                className={location.pathname === '/dashboard/scan' ? 'active' : ''}
-              >
-                <span className="sidebar-icon">
-                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4" stroke="#fff" strokeWidth="2"/><path d="M7 7h10v10H7V7z" stroke="#fff" strokeWidth="2"/></svg>
-                </span>
-                Escanear
-              </Link>
-            </li>
+            
+            {/* Opciones específicas para usuarios */}
+            {!isComercio && (
+              <li>
+                <Link 
+                  to="/dashboard/scan"
+                  className={location.pathname === '/dashboard/scan' ? 'active' : ''}
+                >
+                  <span className="sidebar-icon">
+                    <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4" stroke="#fff" strokeWidth="2"/><path d="M7 7h10v10H7V7z" stroke="#fff" strokeWidth="2"/></svg>
+                  </span>
+                  Escanear
+                </Link>
+              </li>
+            )}
+
+            {/* Opciones específicas para comercios */}
+            {isComercio && (
+              <li>
+                <Link 
+                  to="/dashboard/receive"
+                  className={location.pathname === '/dashboard/receive' ? 'active' : ''}
+                >
+                  <span className="sidebar-icon">
+                    <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 12l2 2 4-4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </span>
+                  Recibir Reciclajes
+                </Link>
+              </li>
+            )}
+            
             <li>
               <Link 
                 to="/dashboard/achievements"
@@ -120,7 +144,7 @@ function Sidebar() {
                 <span className="sidebar-icon">
                   <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M17 5V3H7v2M17 5a5 5 0 0 1-10 0M17 5h2a2 2 0 0 1 2 2c0 3.87-3.13 7-7 7s-7-3.13-7-7a2 2 0 0 1 2-2h2" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </span>
-                Logros
+                {isComercio ? 'Estadísticas' : 'Logros'}
               </Link>
             </li>
             <li>
