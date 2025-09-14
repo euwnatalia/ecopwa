@@ -4,8 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "node scripts/build-sw.js && vite",
+    "build": "node scripts/build-sw.js && vite build",
+    "build:prod": "node scripts/build-sw.js && vite build --mode production",
+    "build:dondereciclo": "cp .env.production .env && npm run build:prod",
+    "build-sw": "node scripts/build-sw.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
+import API_URL from "../../config/api.js";
 import "./ComercioReceive.css";
 
 function ComercioReceive() {
@@ -41,7 +42,7 @@ function ComercioReceive() {
   const cargarReciclajes = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:4000/api/reciclajes/comercio", {
+      const response = await fetch(`${API_URL}/reciclajes/comercio`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -89,7 +90,7 @@ function ComercioReceive() {
       }
 
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:4000/api/reciclajes/recibir", {
+      const response = await fetch(`${API_URL}/reciclajes/recibir`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

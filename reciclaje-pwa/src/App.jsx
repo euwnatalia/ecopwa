@@ -8,6 +8,7 @@ import Scan from "./pages/dashboard/Scan";
 import Achievements from "./pages/dashboard/Achievements";
 import Profile from "./pages/dashboard/Profile";
 import ComercioReceive from "./pages/dashboard/ComercioReceive";
+import API_URL from "./config/api.js";
 
 function App() {
   const [user, setUser] = useState(() => {
@@ -34,7 +35,7 @@ function App() {
           const token = localStorage.getItem("token");
           if (!token) return;
           
-          const response = await fetch("http://localhost:4000/api/usuarios", {
+          const response = await fetch(`${API_URL}/usuarios`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           

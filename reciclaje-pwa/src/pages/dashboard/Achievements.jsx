@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import API_URL from "../../config/api.js";
 import "./Achievements.css";
 
 function Achievements({ userDetails }) {
@@ -41,8 +42,8 @@ function Achievements({ userDetails }) {
       
       // Usar endpoint diferente para comercios
       const endpoint = isComercio 
-        ? "http://localhost:4000/api/reciclajes/comercio/estadisticas"
-        : "http://localhost:4000/api/reciclajes/historial";
+        ? `${API_URL}/reciclajes/comercio/estadisticas`
+        : `${API_URL}/reciclajes/historial`;
         
       const response = await fetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` }

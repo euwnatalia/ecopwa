@@ -5,6 +5,7 @@ import {
   Marker,
   InfoWindow
 } from "@react-google-maps/api";
+import API_URL from "../../config/api.js";
 import "./Map.css";
 
 const API_KEY = "AIzaSyDogeXjIze7GDPF1IOOkgX3acOgBvPqPv0";
@@ -72,7 +73,7 @@ export default function MapView() {
       }
 
       const response = await fetch(
-        `http://localhost:4000/api/puntos?${params}`, 
+        `${API_URL}/puntos?${params}`, 
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -172,7 +173,7 @@ export default function MapView() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:4000/api/puntos", {
+      const response = await fetch(`${API_URL}/puntos`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -201,7 +202,7 @@ export default function MapView() {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:4000/api/puntos/${puntoId}/validar`,
+        `${API_URL}/puntos/${puntoId}/validar`,
         {
           method: "PUT",
           headers: { Authorization: `Bearer ${token}` }
@@ -236,7 +237,7 @@ export default function MapView() {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:4000/api/puntos/${puntoId}/invalidar`,
+        `${API_URL}/puntos/${puntoId}/invalidar`,
         {
           method: "PUT",
           headers: {

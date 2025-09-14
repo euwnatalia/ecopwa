@@ -5,8 +5,36 @@ require('dotenv').config();
 require('./config/firebase'); // carga Firebase
 
 const app = express();
-// CORS completamente deshabilitado - permite cualquier origen
-app.use(cors());
+
+// Configuración de CORS para dominios específicos
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Dominios permitidos
+    const allowedOrigins = [
+      'http://localhost:5174',  // Desarrollo local
+      'http://localhost:3000',  // Desarrollo local (Create React App)
+      'https://dondereciclo.com.ar',
+      'https://www.dondereciclo.com.ar',
+      'http://dondereciclo.com.ar',   // Por si no tienen HTTPS aún
+      'http://www.dondereciclo.com.ar'
+    ];
+    
+    // Permitir requests sin origin (para móviles, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('❌ CORS bloqueado para origen:', origin);
+      callback(new Error('No permitido por CORS'));
+    }
+  },
+  credentials: true, // Permite cookies y headers de autenticación
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 
 app.use(express.json());
 

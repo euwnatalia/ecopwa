@@ -1,6 +1,7 @@
 // src/pages/dashboard/Scan.jsx
 import { useState, useEffect, useRef } from "react";
 import Quagga from "@ericblade/quagga2";
+import API_URL from "../../config/api.js";
 import "./Scan.css";
 
 export default function Scan() {
@@ -94,7 +95,7 @@ export default function Scan() {
       }
 
       const response = await fetch(
-        `http://localhost:4000/api/puntos?${params}`, 
+        `${API_URL}/puntos?${params}`, 
         {
           headers: { 
             Authorization: `Bearer ${localStorage.getItem("token")}` 
@@ -266,7 +267,7 @@ export default function Scan() {
     const buscarProducto = async () => {
       try {
         const response = await fetch(
-          `http://localhost:4000/api/productos?codigo=${encodeURIComponent(codigo)}`, 
+          `${API_URL}/productos?codigo=${encodeURIComponent(codigo)}`, 
           {
             headers: { 
               Authorization: `Bearer ${localStorage.getItem("token")}` 
@@ -313,7 +314,7 @@ export default function Scan() {
     }
     
     try {
-      const res = await fetch("http://localhost:4000/api/productos", {
+      const res = await fetch(`${API_URL}/productos`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -389,7 +390,7 @@ export default function Scan() {
         reciclaje.userLng = userLocation.lng;
       }
       
-      const res = await fetch("http://localhost:4000/api/reciclajes", {
+      const res = await fetch(`${API_URL}/reciclajes`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -510,7 +511,7 @@ export default function Scan() {
 
     setCreandoPunto(true);
     try {
-      const response = await fetch("http://localhost:4000/api/puntos", {
+      const response = await fetch(`${API_URL}/puntos`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

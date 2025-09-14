@@ -2,6 +2,7 @@ import { auth, provider } from "../firebase/firebase";
 import { signInWithPopup } from "firebase/auth";
 import { useState, useEffect } from "react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
+import API_URL from "../config/api.js";
 import "./LoginPage.css";
 
 const API_KEY = "AIzaSyDogeXjIze7GDPF1IOOkgX3acOgBvPqPv0";
@@ -41,7 +42,7 @@ const handleLogin = async () => {
       const token = await user.getIdToken();
       localStorage.setItem("token", token);
 
-      const res = await fetch("http://localhost:4000/api/usuarios", {
+      const res = await fetch(`${API_URL}/usuarios`, {
         method: "GET",
         headers: {
           "Authorization": "Bearer " + token
@@ -92,7 +93,7 @@ const handleLogin = async () => {
         ...formData
       };
 
-      const res = await fetch("http://localhost:4000/api/usuarios", {
+      const res = await fetch(`${API_URL}/usuarios`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -128,7 +129,7 @@ const handleLogin = async () => {
       const params = new URLSearchParams();
       if (filtroTipo) params.append('tipo', filtroTipo);
       
-      const response = await fetch(`http://localhost:4000/api/puntos/publicos?${params}`);
+      const response = await fetch(`${API_URL}/puntos/publicos?${params}`);
       if (response.ok) {
         const data = await response.json();
         setPuntosOriginales(data);

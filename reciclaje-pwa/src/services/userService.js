@@ -1,5 +1,5 @@
 // Servicio para manejar datos del usuario
-const API_BASE_URL = 'http://localhost:4000/api';
+import API_URL from '../config/api.js';
 
 export const userService = {
   // Obtener estadísticas básicas del usuario
@@ -10,7 +10,7 @@ export const userService = {
         throw new Error('No hay token de autenticación');
       }
 
-      const response = await fetch(`${API_BASE_URL}/reciclajes/historial`, {
+      const response = await fetch(`${API_URL}/reciclajes/historial`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -37,7 +37,7 @@ export const userService = {
         throw new Error('No hay token de autenticación');
       }
 
-      const response = await fetch(`${API_BASE_URL}/reciclajes/historial`, {
+      const response = await fetch(`${API_URL}/reciclajes/historial`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

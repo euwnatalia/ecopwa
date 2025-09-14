@@ -35,7 +35,7 @@ const urlsToCache = [
 ];
 
 // Configuración de la API - Se reemplaza automáticamente durante el build
-const API_BASE_URL = 'http://localhost:4000';
+const API_BASE_URL = '__API_BASE_URL__';
 
 // URLs de la API que queremos cachear
 const apiUrlsToCache = [
