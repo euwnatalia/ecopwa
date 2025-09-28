@@ -1,19 +1,28 @@
 module.exports = {
   apps: [
     {
-      name: 'reciclaje-api',
-      script: './reciclaje-api/src/app.js',
+      name: "reciclaje-api",
+      script: "src/app.js",
+      cwd: "./reciclaje-api",
       instances: 1,
-      exec_mode: 'fork',
-      env_production: {
-        NODE_ENV: 'production',
-        PORT: 4000,
-        FRONTEND_URL: 'https://dondereciclo.com.ar'
-      },
-      error_file: './logs/err.log',
-      out_file: './logs/out.log',
-      log_file: './logs/combined.log',
-      time: true
+      autorestart: true,
+      watch: false,
+      env: {
+        NODE_ENV: "production",
+        PORT: 3001
+      }
+    },
+    {
+      name: "reciclaje-pwa",
+      script: "npx",
+      args: "serve -s dist -l 5174",
+      cwd: "./reciclaje-pwa",
+      autorestart: true,
+      watch: false,
+      env: {
+        NODE_ENV: "production",
+        PORT: 5174
+      }
     }
   ]
 };
