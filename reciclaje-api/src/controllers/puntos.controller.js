@@ -22,15 +22,26 @@ async function getPuntos(req, res) {
     
     let query = db.collection('puntos');
     
-    // Solo aplicar filtro por tipo si se especifica (evitar multiple where con !=)
-    if (tipo) {
-      query = query.where('tipo', '==', tipo);
-    }
-    
     const snap = await query.get();
     let lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     
     console.log(`📊 Found ${lista.length} puntos before filtering`);
+    
+    // Filtrar por tipo (soporta tanto array como string para compatibilidad)
+    if (tipo) {
+      lista = lista.filter(punto => {
+        // Soporte para puntos con array de tipos (nuevo formato)
+        if (Array.isArray(punto.tipos)) {
+          return punto.tipos.includes(tipo);
+        }
+        // Soporte para puntos con tipo único (formato antiguo)
+        if (punto.tipo) {
+          return punto.tipo === tipo;
+        }
+        return false;
+      });
+      console.log(`🔍 After filtering by tipo "${tipo}": ${lista.length} puntos`);
+    }
     
     // Filtrar localmente por estado activo si es necesario
     if (!incluirInactivos || incluirInactivos === 'false') {
@@ -82,25 +93,27 @@ function calcularRating(validaciones, invalidaciones) {
 
 async function createPunto(req, res) {
   try {
-    const { nombre, lat, lng, tipo, direccion } = req.body;
+    const { nombre, lat, lng, tipos, direccion, horarios, observaciones } = req.body;
     
-    if (!nombre || !lat || !lng || !tipo) {
-      return res.status(400).json({ error: 'Faltan datos obligatorios: nombre, lat, lng, tipo' });
+    if (!nombre || !lat || !lng || !tipos || !Array.isArray(tipos) || tipos.length === 0) {
+      return res.status(400).json({ error: 'Faltan datos obligatorios: nombre, lat, lng, tipos (debe ser un array con al menos un elemento)' });
     }
 
     const data = {
       nombre,
       lat: parseFloat(lat),
       lng: parseFloat(lng),
-      tipo,
+      tipos,
       direccion: direccion || '',
+      horarios: horarios || '',
+      observaciones: observaciones || '',
       creadoPor: req.user?.uid || 'anonimo',
       creadoEn: new Date().toISOString(),
       activo: true,
       validaciones: 0,
       invalidaciones: 0,
-      validadoPor: [], // Array de UIDs que validaron
-      invalidadoPor: [] // Array de UIDs que invalidaron
+      validadoPor: [],
+      invalidadoPor: []
     };
     
     const ref = await db.collection('puntos').add(data);
@@ -213,7 +226,7 @@ async function invalidarPunto(req, res) {
       validadoPor
     };
     
-    if (invalidaciones >= 3) {
+    if (invalidaciones > 2 || (motivo && motivo.toLowerCase().includes("no existe") && invalidaciones > 1)) {
       updates.activo = false;
       updates.motivoInactivo = 'Múltiples reportes de invalidez';
     }
@@ -221,13 +234,26 @@ async function invalidarPunto(req, res) {
     // Registrar el motivo si se proporciona
     if (motivo) {
       updates.ultimoMotivoInvalidacion = motivo;
+      updates.motivoReporte = motivo;
+      updates.fechaReporte = new Date().toISOString();
       updates.fechaUltimaInvalidacion = new Date().toISOString();
+      
+      // Guardar historial de reportes
+      const reportes = punto.reportes || [];
+      reportes.push({
+        motivo,
+        reportadoPor: userId,
+        fecha: new Date().toISOString()
+      });
+      updates.reportes = reportes;
     }
     
     await puntoRef.update(updates);
     
     res.json({ 
-      message: invalidaciones >= 3 ? 'Punto marcado como inactivo' : 'Punto invalidado',
+      message: invalidaciones > 2 ?
+        'Punto reportado e inactivado por múltiples reportes' :
+        'Punto reportado correctamente',
       validaciones,
       invalidaciones,
       activo: updates.activo !== false,

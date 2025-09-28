@@ -1,21 +1,10 @@
-// Servicio para manejar datos del usuario
 import API_URL from '../config/api.js';
+import authFetch from '../utils/authFetch.js';
 
 export const userService = {
-  // Obtener estadísticas básicas del usuario
   async getUserStats() {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No hay token de autenticación');
-      }
-
-      const response = await fetch(`${API_URL}/reciclajes/historial`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await authFetch(`${API_URL}/reciclajes/historial`);
 
       if (!response.ok) {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
@@ -24,35 +13,21 @@ export const userService = {
       const data = await response.json();
       return data.estadisticas;
     } catch (error) {
-      console.error('Error obteniendo estadísticas del usuario:', error);
       throw error;
     }
   },
 
-  // Obtener logros básicos del usuario (solo los completados más recientes)
   async getUserAchievements() {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No hay token de autenticación');
-      }
-
-      const response = await fetch(`${API_URL}/reciclajes/historial`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await authFetch(`${API_URL}/reciclajes/historial`);
 
       if (!response.ok) {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
-      // Devolver solo los 4 logros más recientes para el perfil
       return data.logros.slice(0, 4);
     } catch (error) {
-      console.error('Error obteniendo logros del usuario:', error);
       throw error;
     }
   }

@@ -1,86 +1,22 @@
 {
-  "name": "EcoPWA - Aplicación de Reciclaje",
-  "short_name": "EcoPWA",
+  "name": "reciclAR - Aplicación de Reciclaje",
+  "short_name": "reciclAR",
   "description": "Aplicación para registrar reciclajes, encontrar puntos de reciclaje y obtener logros ecológicos",
-  "theme_color": "#2E7D32",
-  "background_color": "#F5F5F5",
+  "theme_color": "#2E8B57",
+  "background_color": "#F1F8E9",
   "display": "standalone",
   "scope": "/",
   "start_url": "/",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icons/icon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-152x152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable any"
-    }
-  ],
-  "splash_pages": [
-    {
-      "src": "/icons/splash-640x1136.png",
-      "sizes": "640x1136",
-      "type": "image/png"
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     }
   ],
   "categories": ["productivity", "utilities", "lifestyle"],
   "lang": "es-AR",
   "dir": "ltr",
-  "prefer_related_applications": false,
-  "screenshots": [
-    {
-      "src": "/screenshots/desktop.png",
-      "sizes": "1280x800",
-      "type": "image/png",
-      "form_factor": "wide"
-    },
-    {
-      "src": "/screenshots/mobile.png", 
-      "sizes": "375x812",
-      "type": "image/png",
-      "form_factor": "narrow"
-    }
-  ]
-} 
+  "prefer_related_applications": false
+}

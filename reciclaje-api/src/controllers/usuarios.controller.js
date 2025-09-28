@@ -91,4 +91,29 @@ async function createUser(req, res) {
   }
 }
 
-module.exports = { getUsers, createUser, getUserByUid };
+async function updateUserType(req, res) {
+  try {
+    const { uid } = req.user;
+    const { tipo } = req.body;
+
+    if (!tipo || (tipo !== "usuario" && tipo !== "comercio")) {
+      return res.status(400).json({ error: "Tipo de usuario inválido" });
+    }
+
+    const snap = await db.collection("usuarios").where("uid", "==", uid).get();
+
+    if (snap.empty) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    const userDoc = snap.docs[0];
+    await userDoc.ref.update({ tipo });
+
+    res.json({ message: "Tipo de usuario actualizado", tipo });
+  } catch (error) {
+    console.error("Error actualizando tipo de usuario:", error);
+    res.status(500).json({ error: "Error al actualizar tipo de usuario" });
+  }
+}
+
+module.exports = { getUsers, createUser, getUserByUid, updateUserType };

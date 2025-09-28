@@ -1,7 +1,7 @@
 .sidebar {
   width: 250px !important;
   height: 100vh !important;
-  background: linear-gradient(135deg, #388E3C 80%, #2E7D32 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
   color: white;
   padding: 1.5rem;
   box-shadow: 4px 0 24px rgba(56,142,60,0.15);
@@ -14,7 +14,7 @@
   flex-direction: column;
   max-width: 250px !important;
   min-width: 250px !important;
-  font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+  font-family: 'Nunito', 'Open Sans', sans-serif;
 }
 
 .sidebar.mobile-hidden {
@@ -94,14 +94,56 @@
   background: #A5D6A7;
 }
 
-/* Botón hamburguesa para mobile */
+.sidebar-bottom {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.logout-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  font-size: 1.08rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  transition: background 0.25s, border-color 0.25s, transform 0.18s;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.02);
+}
+
+.logout-btn .sidebar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 7px;
+  transition: background 0.2s;
+}
+
+.logout-btn:hover .sidebar-icon {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 .mobile-menu-toggle {
   display: none;
   position: fixed;
   top: 1rem;
   left: 1rem;
   z-index: 101; /* Por encima del sidebar */
-  background: #2E7D32;
+  background: var(--primary-color);
   color: white;
   border: none;
   padding: 0.75rem;
@@ -112,7 +154,7 @@
 }
 
 .mobile-menu-toggle:hover {
-  background: #1b5e20;
+  background: var(--primary-dark);
 }
 
 /* Overlay para cerrar el sidebar en mobile */
@@ -179,7 +221,7 @@
   padding: 1rem 0.5rem;
   border-radius: 12px;
   font-weight: 600;
-  background: linear-gradient(135deg, #FF9800, #F57C00);
+  background: linear-gradient(135deg, var(--secondary-color), var(--warning-color));
   color: white;
   border: none;
   cursor: pointer;

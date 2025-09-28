@@ -1,25 +1,41 @@
-/* Estilos globales para EcoPWA */
+/* Estilos globales para reciclAR - Tema Verde Sustentable */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=Open+Sans:wght@300;400;500;600;700&display=swap');
+
 :root {
-  /* Colores principales */
-  --primary-color: #2E7D32;
-  --primary-light: #4CAF50;
-  --primary-dark: #1B5E20;
-  --secondary-color: #FF9800;
-  --background-color: #F5F5F5;
-  --text-color: #333333;
-  --text-light: #666666;
-  --white: #FFFFFF;
-  --error-color: #D32F2F;
-  --success-color: #388E3C;
-  
-  /* Fuentes */
-  font-family: 'Roboto', 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* Paleta de colores inspirada en el reciclaje y la naturaleza */
+  --primary-color: #2E8B57;        /* Verde bosque marino */
+  --primary-light: #3CB371;        /* Verde marino medio */
+  --primary-dark: #1E5631;         /* Verde bosque oscuro */
+  --secondary-color: #FFA726;      /* Naranja ámbar (energía renovable) */
+  --accent-color: #66BB6A;         /* Verde hoja fresca */
+  --earth-color: #8D6E63;          /* Marrón tierra */
+  --sky-color: #42A5F5;            /* Azul cielo limpio */
+
+  /* Colores de fondo y superficie */
+  --background-color: #F1F8E9;     /* Verde muy claro, natural */
+  --surface-color: #FFFFFF;        /* Blanco puro */
+  --card-background: #E8F5E8;      /* Verde muy suave para cards */
+
+  /* Colores de texto */
+  --text-primary: #1B4332;         /* Verde oscuro para texto principal */
+  --text-secondary: #2D5016;       /* Verde medio para texto secundario */
+  --text-light: #52734D;           /* Verde suave para texto auxiliar */
+  --text-on-primary: #FFFFFF;      /* Blanco para texto sobre primario */
+
+  /* Colores de estado */
+  --success-color: #4CAF50;        /* Verde éxito */
+  --warning-color: #FF9800;        /* Naranja advertencia */
+  --error-color: #E53935;          /* Rojo error */
+  --info-color: #2196F3;           /* Azul información */
+
+  /* Tipografía renovada */
+  font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.6;
   font-weight: 400;
-  
+
   /* Configuración general */
   color-scheme: light;
-  color: var(--text-color);
+  color: var(--text-primary);
   background-color: var(--background-color);
   
   /* Optimizaciones de renderizado */
@@ -65,24 +81,26 @@ a:focus {
 
 /* Estilos para títulos */
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Poppins', 'Roboto', sans-serif;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
   line-height: 1.3;
   margin: 0 0 1rem 0;
-  color: var(--text-color);
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
 }
 
 h1 {
-  font-size: clamp(1.8rem, 4vw, 3.2rem);
+  font-size: clamp(1.4rem, 3vw, 2.4rem);
   font-weight: 700;
 }
 
 h2 {
-  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  font-size: clamp(1.2rem, 2.5vw, 2rem);
   font-weight: 600;
 }
 
 h3 {
-  font-size: clamp(1.3rem, 2.5vw, 2rem);
+  font-size: clamp(1rem, 2vw, 1.5rem);
   font-weight: 600;
 }
 
@@ -94,23 +112,24 @@ p {
 
 /* Botones base */
 button {
-  border-radius: 8px;
+  border-radius: 12px;
   border: none;
   padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  font-weight: 500;
-  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: 'Nunito', sans-serif;
   cursor: pointer;
-  transition: all 0.3s ease;
-  background-color: var(--primary-color);
-  color: var(--white);
-  box-shadow: 0 2px 8px rgba(46, 125, 50, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  color: var(--text-on-primary);
+  box-shadow: 0 4px 12px rgba(46, 139, 87, 0.25);
+  letter-spacing: 0.025em;
 }
 
 button:hover {
-  background-color: var(--primary-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(46, 139, 87, 0.35);
 }
 
 button:focus {
@@ -126,19 +145,28 @@ button:disabled {
 
 /* Inputs base */
 input, select, textarea {
-  font-family: inherit;
+  font-family: 'Open Sans', sans-serif;
   font-size: 1rem;
-  border: 2px solid #ddd;
-  border-radius: 8px;
-  padding: 0.75rem;
-  transition: border-color 0.3s ease;
+  font-weight: 400;
+  border: 2px solid #C8E6C9;
+  border-radius: 10px;
+  padding: 0.875rem 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
+  background-color: var(--surface-color);
+  color: var(--text-primary);
 }
 
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+  box-shadow: 0 0 0 4px rgba(46, 139, 87, 0.15);
+  background-color: var(--surface-color);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--text-light);
+  font-weight: 300;
 }
 
 /* Utilidades responsive */

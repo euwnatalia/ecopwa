@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { auth } from "../../firebase/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { userService } from "../../services/userService";
+import API_URL from "../../config/api.js";
 import "./Home.css";
 
 function Home({ userDetails }) {
@@ -17,6 +18,7 @@ function Home({ userDetails }) {
   const [recentActivity, setRecentActivity] = useState([]);
   const [ecoTips, setEcoTips] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [commerceStats, setCommerceStats] = useState(null);
 
   // Consejos ecológicos rotativos
   const ecoTipsDatabase = [
@@ -77,27 +79,66 @@ function Home({ userDetails }) {
     try {
       setLoading(true);
       setError(null);
-      
-      // Cargar estadísticas y logros en paralelo
-      const [userStats, userAchievements] = await Promise.all([
-        userService.getUserStats(),
-        userService.getUserAchievements()
-      ]);
-      
-      setStats(userStats);
-      setAchievements(userAchievements.slice(0, 3)); // Solo los 3 más recientes
-      
-      // Generar metas semanales basadas en datos del usuario
-      generateWeeklyGoals(userStats);
-      
-      // Generar actividad reciente simulada
-      generateRecentActivity(userStats);
-      
+
+      if (userDetails?.tipo === 'comercio') {
+        // Cargar estadísticas específicas para comercio
+        await loadCommerceData();
+      } else {
+        // Cargar estadísticas y logros para usuarios recicladores
+        const [userStats, userAchievements] = await Promise.all([
+          userService.getUserStats(),
+          userService.getUserAchievements()
+        ]);
+
+        setStats(userStats);
+        setAchievements(userAchievements.slice(0, 3));
+
+        generateWeeklyGoals(userStats);
+        generateRecentActivity(userStats);
+      }
+
     } catch (err) {
       console.error('Error cargando datos del usuario:', err);
       setError('Error al cargar los datos');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCommerceData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/reciclajes/comercio`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const reciclajes = await response.json();
+
+        // Calcular estadísticas del comercio
+        const stats = {
+          totalReciclajes: reciclajes.length,
+          totalPuntos: reciclajes.reduce((sum, r) => sum + r.puntos, 0),
+          pesoTotal: reciclajes.reduce((sum, r) => sum + r.cantidad, 0),
+          tiposReciclados: reciclajes.reduce((tipos, r) => {
+            tipos[r.tipo] = (tipos[r.tipo] || 0) + 1;
+            return tipos;
+          }, {}),
+          usuariosAtendidos: new Set(reciclajes.map(r => r.usuario)).size,
+          reciclajesToday: reciclajes.filter(r => {
+            const today = new Date().toDateString();
+            const reciclajeDate = new Date(r.fechaCreacion).toDateString();
+            return today === reciclajeDate;
+          }).length
+        };
+
+        setCommerceStats(stats);
+        generateCommerceGoals(stats);
+        generateCommerceActivity(reciclajes);
+
+      }
+    } catch (error) {
+      console.error("Error cargando datos del comercio:", error);
     }
   };
 
@@ -136,6 +177,41 @@ function Home({ userDetails }) {
     setWeeklyGoals(goals);
   };
 
+  // Generar metas semanales para comercio
+  const generateCommerceGoals = (commerceStats) => {
+    if (!commerceStats) return;
+
+    const avgWeekly = commerceStats.totalReciclajes / 4;
+    const goals = [
+      {
+        id: 1,
+        title: "Reciclajes recibidos esta semana",
+        current: Math.floor(avgWeekly * 0.6),
+        target: Math.max(5, Math.floor(avgWeekly * 1.2)),
+        icon: "🏪",
+        type: "reciclajes"
+      },
+      {
+        id: 2,
+        title: "Usuarios atendidos",
+        current: Math.floor(commerceStats.usuariosAtendidos * 0.7),
+        target: Math.max(3, Math.floor(commerceStats.usuariosAtendidos * 1.1)),
+        icon: "👥",
+        type: "usuarios"
+      },
+      {
+        id: 3,
+        title: "Puntos otorgados",
+        current: Math.floor((commerceStats.totalPuntos / 4) * 0.8),
+        target: Math.max(200, Math.floor((commerceStats.totalPuntos / 4) * 1.3)),
+        icon: "🏆",
+        type: "puntos"
+      }
+    ];
+
+    setWeeklyGoals(goals);
+  };
+
   // Generar actividad reciente simulada
   const generateRecentActivity = (userStats) => {
     if (!userStats) return;
@@ -168,6 +244,54 @@ function Home({ userDetails }) {
     ];
     
     setRecentActivity(activities.slice(0, 3));
+  };
+
+  // Generar actividad reciente para comercio
+  const generateCommerceActivity = (reciclajes) => {
+    if (!reciclajes || reciclajes.length === 0) return;
+
+    const recentReciclajes = reciclajes
+      .sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion))
+      .slice(0, 3);
+
+    const activities = recentReciclajes.map(reciclaje => {
+      const timeAgo = getTimeAgo(reciclaje.fechaCreacion);
+      return {
+        icon: getTypeIcon(reciclaje.tipo),
+        text: `Recibiste ${reciclaje.cantidad}kg de ${reciclaje.tipo} de ${reciclaje.usuario}`,
+        time: timeAgo,
+        type: "commerce-receive"
+      };
+    });
+
+    setRecentActivity(activities);
+  };
+
+  // Obtener icono según tipo de material
+  const getTypeIcon = (tipo) => {
+    const icons = {
+      "Plástico": "🥤",
+      "Vidrio": "🫙",
+      "Cartón": "📦",
+      "Papel": "📄",
+      "Metal": "🥫"
+    };
+    return icons[tipo] || "♻️";
+  };
+
+  // Calcular tiempo transcurrido
+  const getTimeAgo = (fechaCreacion) => {
+    const now = new Date();
+    const fecha = new Date(fechaCreacion);
+    const diffInHours = Math.floor((now - fecha) / (1000 * 60 * 60));
+
+    if (diffInHours < 1) return "Hace menos de 1 hora";
+    if (diffInHours < 24) return `Hace ${diffInHours} hora${diffInHours > 1 ? 's' : ''}`;
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `Hace ${diffInDays} día${diffInDays > 1 ? 's' : ''}`;
+
+    return `Hace ${Math.floor(diffInDays / 7)} semana${Math.floor(diffInDays / 7) > 1 ? 's' : ''}`;
   };
 
   // Generar consejos eco aleatorios
@@ -248,23 +372,24 @@ function Home({ userDetails }) {
 
   const level = calculateLevel(stats?.puntosTotal);
   const progressPercentage = calculateProgress(stats?.puntosTotal);
+  const isCommerce = userDetails?.tipo === 'comercio';
 
   return (
     <div className="home-container">
       {/* Header personalizado */}
       <div className="home-header">
         <div className="greeting-section">
-          <h1>{getGreeting()} 🌱</h1>
+          <h1>{getGreeting()} {isCommerce ? '🏪' : '🌱'}</h1>
           <p className="date-info">
-            {currentTime.toLocaleDateString('es-AR', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
+            {currentTime.toLocaleDateString('es-AR', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
             })}
           </p>
         </div>
-        <button 
+        <button
           className={`refresh-btn ${refreshing ? 'spinning' : ''}`}
           onClick={handleRefreshData}
           disabled={refreshing}
@@ -276,56 +401,98 @@ function Home({ userDetails }) {
 
       {/* Estadísticas principales */}
       <div className="home-stats-grid">
-        <div className="stat-card featured">
-          <div className="stat-icon">🏆</div>
-          <div className="stat-content">
-            <div className="stat-number">{stats?.puntosTotal || 0}</div>
-            <div className="stat-label">Puntos Eco</div>
-          </div>
-        </div>
-        
-        <div className="stat-card">
-          <div className="stat-icon">♻️</div>
-          <div className="stat-content">
-            <div className="stat-number">{stats?.totalReciclajes || 0}</div>
-            <div className="stat-label">Reciclajes</div>
-          </div>
-        </div>
-        
-        <div className="stat-card">
-          <div className="stat-icon">📊</div>
-          <div className="stat-content">
-            <div className="stat-number">Nivel {level}</div>
-            <div className="stat-label">Tu Nivel</div>
-          </div>
-        </div>
-        
-        <div className="stat-card">
-          <div className="stat-icon">🌍</div>
-          <div className="stat-content">
-            <div className="stat-number">{((stats?.pesoTotal || 0) * 0.5).toFixed(1)} kg</div>
-            <div className="stat-label">CO2 Ahorrado</div>
-          </div>
-        </div>
+        {isCommerce ? (
+          // Estadísticas para comercio
+          <>
+            <div className="stat-card featured">
+              <div className="stat-icon">🏪</div>
+              <div className="stat-content">
+                <div className="stat-number">{commerceStats?.totalReciclajes || 0}</div>
+                <div className="stat-label">Reciclajes Recibidos</div>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon">🏆</div>
+              <div className="stat-content">
+                <div className="stat-number">{commerceStats?.totalPuntos || 0}</div>
+                <div className="stat-label">Puntos Otorgados</div>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon">👥</div>
+              <div className="stat-content">
+                <div className="stat-number">{commerceStats?.usuariosAtendidos || 0}</div>
+                <div className="stat-label">Usuarios Atendidos</div>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon">⚖️</div>
+              <div className="stat-content">
+                <div className="stat-number">{(commerceStats?.pesoTotal || 0).toFixed(1)} kg</div>
+                <div className="stat-label">Peso Total Recibido</div>
+              </div>
+            </div>
+          </>
+        ) : (
+          // Estadísticas para usuarios recicladores
+          <>
+            <div className="stat-card featured">
+              <div className="stat-icon">🏆</div>
+              <div className="stat-content">
+                <div className="stat-number">{stats?.puntosTotal || 0}</div>
+                <div className="stat-label">Puntos Eco</div>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon">♻️</div>
+              <div className="stat-content">
+                <div className="stat-number">{stats?.totalReciclajes || 0}</div>
+                <div className="stat-label">Reciclajes</div>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon">📊</div>
+              <div className="stat-content">
+                <div className="stat-number">Nivel {level}</div>
+                <div className="stat-label">Tu Nivel</div>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon">🌍</div>
+              <div className="stat-content">
+                <div className="stat-number">{((stats?.pesoTotal || 0) * 0.5).toFixed(1)} kg</div>
+                <div className="stat-label">CO2 Ahorrado</div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Progreso del nivel */}
-      <div className="level-progress-section">
-        <h2>Tu Progreso - Nivel {level}</h2>
-        <div className="level-progress">
-          <div className="progress-info">
-            <span>Progreso al nivel {level + 1}</span>
-            <span>{stats?.puntosTotal || 0}/500 puntos</span>
+      {/* Progreso del nivel - Solo para usuarios recicladores */}
+      {!isCommerce && (
+        <div className="level-progress-section">
+          <h2>Tu Progreso - Nivel {level}</h2>
+          <div className="level-progress">
+            <div className="progress-info">
+              <span>Progreso al nivel {level + 1}</span>
+              <span>{stats?.puntosTotal || 0}/500 puntos</span>
+            </div>
+            <div className="progress-bar">
+              <div
+                className="progress-fill"
+                style={{ width: `${progressPercentage}%` }}
+              ></div>
+            </div>
+            <div className="progress-percentage">{progressPercentage.toFixed(1)}% completado</div>
           </div>
-          <div className="progress-bar">
-            <div 
-              className="progress-fill" 
-              style={{ width: `${progressPercentage}%` }}
-            ></div>
-          </div>
-          <div className="progress-percentage">{progressPercentage.toFixed(1)}% completado</div>
         </div>
-      </div>
+      )}
 
       {/* Metas semanales */}
       <section className="weekly-goals-section">
@@ -364,37 +531,77 @@ function Home({ userDetails }) {
       <section className="quick-actions-section">
         <h2>🚀 Acciones Rápidas</h2>
         <div className="actions-grid">
-          <button className="action-card primary" onClick={handleScanQR}>
-            <div className="action-icon">📷</div>
-            <div className="action-content">
-              <h3>Escanear Código</h3>
-              <p>Registra un nuevo reciclaje</p>
-            </div>
-          </button>
-          
-          <button className="action-card secondary" onClick={handleViewMap}>
-            <div className="action-icon">🗺️</div>
-            <div className="action-content">
-              <h3>Puntos Cercanos</h3>
-              <p>Encuentra lugares para reciclar</p>
-            </div>
-          </button>
-          
-          <button className="action-card tertiary" onClick={handleViewProfile}>
-            <div className="action-icon">👤</div>
-            <div className="action-content">
-              <h3>Mi Perfil</h3>
-              <p>Ver estadísticas detalladas</p>
-            </div>
-          </button>
-          
-          <button className="action-card quaternary" onClick={handleViewAchievements}>
-            <div className="action-icon">🏆</div>
-            <div className="action-content">
-              <h3>Mis Logros</h3>
-              <p>Revisa tus achievements</p>
-            </div>
-          </button>
+          {isCommerce ? (
+            // Acciones para comercio
+            <>
+              <button className="action-card primary" onClick={() => navigate('/dashboard/receive')}>
+                <div className="action-icon">🏪</div>
+                <div className="action-content">
+                  <h3>Recibir Reciclaje</h3>
+                  <p>Procesar reciclajes de usuarios</p>
+                </div>
+              </button>
+
+              <button className="action-card secondary" onClick={handleViewProfile}>
+                <div className="action-icon">👤</div>
+                <div className="action-content">
+                  <h3>Mi Perfil</h3>
+                  <p>Configurar datos del comercio</p>
+                </div>
+              </button>
+
+              <button className="action-card tertiary" onClick={handleViewAchievements}>
+                <div className="action-icon">📊</div>
+                <div className="action-content">
+                  <h3>Estadísticas</h3>
+                  <p>Ver estadísticas detalladas</p>
+                </div>
+              </button>
+
+              <button className="action-card quaternary" onClick={handleViewMap}>
+                <div className="action-icon">🗺️</div>
+                <div className="action-content">
+                  <h3>Ver en Mapa</h3>
+                  <p>Tu ubicación en el mapa</p>
+                </div>
+              </button>
+            </>
+          ) : (
+            // Acciones para usuarios recicladores
+            <>
+              <button className="action-card primary" onClick={handleScanQR}>
+                <div className="action-icon">📷</div>
+                <div className="action-content">
+                  <h3>Escanear Código</h3>
+                  <p>Registra un nuevo reciclaje</p>
+                </div>
+              </button>
+
+              <button className="action-card secondary" onClick={handleViewMap}>
+                <div className="action-icon">🗺️</div>
+                <div className="action-content">
+                  <h3>Puntos Cercanos</h3>
+                  <p>Encuentra lugares para reciclar</p>
+                </div>
+              </button>
+
+              <button className="action-card tertiary" onClick={handleViewProfile}>
+                <div className="action-icon">👤</div>
+                <div className="action-content">
+                  <h3>Mi Perfil</h3>
+                  <p>Ver estadísticas detalladas</p>
+                </div>
+              </button>
+
+              <button className="action-card quaternary" onClick={handleViewAchievements}>
+                <div className="action-icon">🏆</div>
+                <div className="action-content">
+                  <h3>Mis Logros</h3>
+                  <p>Revisa tus achievements</p>
+                </div>
+              </button>
+            </>
+          )}
         </div>
       </section>
 
@@ -416,8 +623,8 @@ function Home({ userDetails }) {
         </section>
       )}
 
-      {/* Logros recientes */}
-      {achievements.length > 0 && (
+      {/* Logros recientes - Solo para usuarios recicladores */}
+      {!isCommerce && achievements.length > 0 && (
         <section className="recent-achievements-section">
           <h2>🏆 Logros Recientes</h2>
           <div className="achievements-mini-grid">

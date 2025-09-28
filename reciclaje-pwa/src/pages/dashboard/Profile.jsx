@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { auth } from "../../firebase/firebase";
 import { onAuthStateChanged, updateProfile } from "firebase/auth";
 import { userService } from "../../services/userService";
+import API_URL from "../../config/api.js";
 import "./Profile.css";
 
 function Profile() {
   const navigate = useNavigate();
+  const { userDetails } = useOutletContext();
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState(null);
   const [achievements, setAchievements] = useState([]);
@@ -14,6 +16,7 @@ function Profile() {
   const [error, setError] = useState(null);
   const [avatarError, setAvatarError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [commerceStats, setCommerceStats] = useState(null);
   
   // Estados para edición de perfil
   const [isEditing, setIsEditing] = useState(false);
@@ -55,23 +58,70 @@ function Profile() {
     try {
       setLoading(true);
       setError(null);
-      
-      // Cargar estadísticas y logros en paralelo
-      const [userStats, userAchievements] = await Promise.all([
-        userService.getUserStats(),
-        userService.getUserAchievements()
-      ]);
-      
-      setStats(userStats);
-      setAchievements(userAchievements);
-      
-      // Generar progreso semanal simulado basado en datos reales
-      generateWeeklyProgress(userStats);
+
+      if (userDetails?.tipo === 'comercio') {
+        // Cargar estadísticas específicas para comercio
+        await loadCommerceData();
+      } else {
+        // Cargar estadísticas y logros para usuarios recicladores
+        const [userStats, userAchievements] = await Promise.all([
+          userService.getUserStats(),
+          userService.getUserAchievements()
+        ]);
+
+        setStats(userStats);
+        setAchievements(userAchievements);
+
+        generateWeeklyProgress(userStats);
+      }
     } catch (err) {
       console.error('Error cargando datos del usuario:', err);
       setError('Error al cargar los datos del perfil');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCommerceData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/reciclajes/comercio`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const reciclajes = await response.json();
+
+        // Calcular estadísticas del comercio con fechas fijas
+        const now = new Date();
+        const stats = {
+          totalReciclajes: reciclajes.length,
+          totalPuntos: reciclajes.reduce((sum, r) => sum + r.puntos, 0),
+          pesoTotal: reciclajes.reduce((sum, r) => sum + r.cantidad, 0),
+          tiposReciclados: reciclajes.reduce((tipos, r) => {
+            tipos[r.tipo] = (tipos[r.tipo] || 0) + r.cantidad;
+            return tipos;
+          }, {}),
+          usuariosAtendidos: new Set(reciclajes.map(r => r.usuario)).size,
+          primerReciclaje: reciclajes.length > 0 ?
+            new Date(Math.min(...reciclajes.map(r => new Date(r.fechaCreacion)))).toISOString() :
+            null,
+          ultimoReciclaje: reciclajes.length > 0 ?
+            new Date(Math.max(...reciclajes.map(r => new Date(r.fechaCreacion)))).toISOString() :
+            null,
+          reciclajesToday: reciclajes.filter(r => {
+            const today = new Date().toDateString();
+            const reciclajeDate = new Date(r.fechaCreacion).toDateString();
+            return today === reciclajeDate;
+          }).length
+        };
+
+        setCommerceStats(stats);
+        generateCommerceWeeklyProgress(reciclajes);
+
+      }
+    } catch (error) {
+      console.error("Error cargando datos del comercio:", error);
     }
   };
 
@@ -88,6 +138,30 @@ function Profile() {
       date: new Date(Date.now() - (6 - index) * 24 * 60 * 60 * 1000)
     }));
     
+    setWeeklyProgress(progress);
+  };
+
+  // Generar datos de progreso semanal para comercio
+  const generateCommerceWeeklyProgress = (reciclajes) => {
+    const days = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+    const now = new Date();
+
+    const progress = days.map((day, index) => {
+      const targetDate = new Date(now);
+      targetDate.setDate(now.getDate() - (6 - index));
+
+      const dayReceivedCount = reciclajes.filter(r => {
+        const reciclajeDate = new Date(r.fechaCreacion);
+        return reciclajeDate.toDateString() === targetDate.toDateString();
+      }).length;
+
+      return {
+        day,
+        activity: dayReceivedCount,
+        date: targetDate
+      };
+    });
+
     setWeeklyProgress(progress);
   };
 
@@ -259,13 +333,16 @@ function Profile() {
     );
   }
 
-  const level = stats ? calculateLevel(stats.puntosTotal) : 1;
-  const progressPercentage = stats ? calculateProgress(stats.puntosTotal) : 0;
-  const co2Saved = stats ? calculateCO2Saved(stats.pesoTotal) : 0;
-  const treesEquivalent = stats ? calculateTreesEquivalent(stats.pesoTotal) : 0;
-  const waterSaved = stats ? calculateWaterSaved(stats) : 0;
-  const energySaved = stats ? calculateEnergySaved(stats.pesoTotal) : 0;
-  const mostRecycledType = stats ? getMostRecycledType(stats) : 'Sin datos';
+  const isCommerce = userDetails?.tipo === 'comercio';
+  const currentStats = isCommerce ? commerceStats : stats;
+
+  const level = currentStats ? calculateLevel(currentStats.puntosTotal || currentStats.totalPuntos || 0) : 1;
+  const progressPercentage = currentStats ? calculateProgress(currentStats.puntosTotal || currentStats.totalPuntos || 0) : 0;
+  const co2Saved = currentStats ? calculateCO2Saved(currentStats.pesoTotal) : 0;
+  const treesEquivalent = currentStats ? calculateTreesEquivalent(currentStats.pesoTotal) : 0;
+  const waterSaved = currentStats ? calculateWaterSaved(currentStats) : 0;
+  const energySaved = currentStats ? calculateEnergySaved(currentStats.pesoTotal) : 0;
+  const mostRecycledType = currentStats ? getMostRecycledType(currentStats) : 'Sin datos';
 
   const userInitials = getUserInitials(user.displayName, user.email);
   const avatarBgColor = getAvatarBackgroundColor(user.email);
@@ -273,8 +350,10 @@ function Profile() {
   return (
     <div className="profile-container">
       <div className="profile-header">
-        <h1>Mi Perfil Eco</h1>
-        <p className="profile-subtitle">Tu impacto ambiental cuenta</p>
+        <h1>{isCommerce ? 'Perfil del Comercio' : 'Mi Perfil Eco'}</h1>
+        <p className="profile-subtitle">
+          {isCommerce ? 'Centro de reciclaje registrado' : 'Tu impacto ambiental cuenta'}
+        </p>
       </div>
 
       {/* Tarjeta principal del usuario */}
@@ -316,8 +395,14 @@ function Profile() {
                 </button>
               </div>
               <p><span className="label">Email:</span> {user.email}</p>
-              <p><span className="label">Miembro desde:</span> {new Date(user.metadata.creationTime).toLocaleDateString('es-AR', { year: 'numeric', month: 'long' })}</p>
-              <p><span className="label">Material favorito:</span> {mostRecycledType}</p>
+              <p><span className="label">{isCommerce ? 'Comercio desde:' : 'Miembro desde:'}</span> {new Date(user.metadata.creationTime).toLocaleDateString('es-AR', { year: 'numeric', month: 'long' })}</p>
+              <p><span className="label">{isCommerce ? 'Material más recibido:' : 'Material favorito:'}</span> {mostRecycledType}</p>
+              {isCommerce && userDetails?.nombre && (
+                <p><span className="label">Nombre del comercio:</span> {userDetails.nombre}</p>
+              )}
+              {isCommerce && userDetails?.direccion && (
+                <p><span className="label">Dirección:</span> {userDetails.direccion}</p>
+              )}
             </>
           ) : (
             <div className="edit-profile-form">
@@ -350,21 +435,23 @@ function Profile() {
             </div>
           )}
           
-          <div className="profile-level-progress">
-            <div className="progress-info">
-              <span>Progreso al siguiente nivel</span>
-              <span>{stats?.puntosTotal || 0}/{level * 500} puntos</span>
+          {!isCommerce && (
+            <div className="profile-level-progress">
+              <div className="progress-info">
+                <span>Progreso al siguiente nivel</span>
+                <span>{stats?.puntosTotal || 0}/{level * 500} puntos</span>
+              </div>
+              <div className="progress-bar">
+                <div
+                  className="progress-fill"
+                  style={{ width: `${progressPercentage}%` }}
+                ></div>
+              </div>
+              <div className="progress-percentage">
+                {progressPercentage.toFixed(1)}% completado
+              </div>
             </div>
-            <div className="progress-bar">
-              <div 
-                className="progress-fill" 
-                style={{ width: `${progressPercentage}%` }}
-              ></div>
-            </div>
-            <div className="progress-percentage">
-              {progressPercentage.toFixed(1)}% completado
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -375,54 +462,86 @@ function Profile() {
           <div className="weekly-chart">
             {weeklyProgress.map((day, index) => (
               <div key={index} className="day-activity">
-                <div 
+                <div
                   className="activity-bar"
-                  style={{ 
+                  style={{
                     height: `${Math.max(10, (day.activity / Math.max(...weeklyProgress.map(d => d.activity))) * 60)}px`,
                     backgroundColor: day.activity > 0 ? '#4CAF50' : '#E0E0E0'
                   }}
-                  title={`${day.activity} reciclajes`}
+                  title={`${day.activity} ${isCommerce ? 'reciclajes recibidos' : 'reciclajes'}`}
                 ></div>
                 <span className="day-label">{day.day}</span>
               </div>
             ))}
           </div>
           <p className="activity-summary">
-            Total esta semana: {weeklyProgress.reduce((sum, day) => sum + day.activity, 0)} reciclajes
+            Total esta semana: {weeklyProgress.reduce((sum, day) => sum + day.activity, 0)} {isCommerce ? 'reciclajes recibidos' : 'reciclajes'}
           </p>
         </div>
       )}
 
       {/* Estadísticas principales */}
       <div className="profile-stats">
-        <div className="profile-stat-card featured">
-          <div className="profile-stat-number">{stats?.puntosTotal || 0}</div>
-          <div className="profile-stat-label">Puntos Eco</div>
-          <div className="profile-stat-description">Total acumulado</div>
-        </div>
-        
-        <div className="profile-stat-card">
-          <div className="profile-stat-number">{stats?.totalReciclajes || 0}</div>
-          <div className="profile-stat-label">Reciclajes</div>
-          <div className="profile-stat-description">Acciones completadas</div>
-        </div>
-        
-        <div className="profile-stat-card">
-          <div className="profile-stat-number">{(stats?.pesoTotal || 0).toFixed(1)} kg</div>
-          <div className="profile-stat-label">Material Reciclado</div>
-          <div className="profile-stat-description">Peso total procesado</div>
-        </div>
-        
-        <div className="profile-stat-card">
-          <div className="profile-stat-number">{Object.keys(stats?.tiposReciclados || {}).length}</div>
-          <div className="profile-stat-label">Tipos Diferentes</div>
-          <div className="profile-stat-description">Materiales reciclados</div>
-        </div>
+        {isCommerce ? (
+          // Estadísticas para comercio
+          <>
+            <div className="profile-stat-card featured">
+              <div className="profile-stat-number">{commerceStats?.totalReciclajes || 0}</div>
+              <div className="profile-stat-label">Reciclajes Recibidos</div>
+              <div className="profile-stat-description">Total procesado</div>
+            </div>
+
+            <div className="profile-stat-card">
+              <div className="profile-stat-number">{commerceStats?.totalPuntos || 0}</div>
+              <div className="profile-stat-label">Puntos Otorgados</div>
+              <div className="profile-stat-description">Total otorgado a usuarios</div>
+            </div>
+
+            <div className="profile-stat-card">
+              <div className="profile-stat-number">{(commerceStats?.pesoTotal || 0).toFixed(1)} kg</div>
+              <div className="profile-stat-label">Material Recibido</div>
+              <div className="profile-stat-description">Peso total procesado</div>
+            </div>
+
+            <div className="profile-stat-card">
+              <div className="profile-stat-number">{commerceStats?.usuariosAtendidos || 0}</div>
+              <div className="profile-stat-label">Usuarios Atendidos</div>
+              <div className="profile-stat-description">Diferentes usuarios</div>
+            </div>
+          </>
+        ) : (
+          // Estadísticas para usuarios recicladores
+          <>
+            <div className="profile-stat-card featured">
+              <div className="profile-stat-number">{stats?.puntosTotal || 0}</div>
+              <div className="profile-stat-label">Puntos Eco</div>
+              <div className="profile-stat-description">Total acumulado</div>
+            </div>
+
+            <div className="profile-stat-card">
+              <div className="profile-stat-number">{stats?.totalReciclajes || 0}</div>
+              <div className="profile-stat-label">Reciclajes</div>
+              <div className="profile-stat-description">Acciones completadas</div>
+            </div>
+
+            <div className="profile-stat-card">
+              <div className="profile-stat-number">{(stats?.pesoTotal || 0).toFixed(1)} kg</div>
+              <div className="profile-stat-label">Material Reciclado</div>
+              <div className="profile-stat-description">Peso total procesado</div>
+            </div>
+
+            <div className="profile-stat-card">
+              <div className="profile-stat-number">{Object.keys(stats?.tiposReciclados || {}).length}</div>
+              <div className="profile-stat-label">Tipos Diferentes</div>
+              <div className="profile-stat-description">Materiales reciclados</div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Impacto ambiental detallado */}
       <div className="environmental-impact-section">
-        <h3>🌍 Tu Impacto Ambiental</h3>
+        <h3>🌍 {isCommerce ? 'Impacto Ambiental del Comercio' : 'Tu Impacto Ambiental'}</h3>
         <div className="impact-grid">
           <div className="impact-card co2">
             <div className="impact-icon">🌬️</div>
@@ -455,12 +574,12 @@ function Profile() {
       </div>
 
       {/* Desglose por tipo de material */}
-      {stats?.tiposReciclados && Object.keys(stats.tiposReciclados).length > 0 && (
+      {currentStats?.tiposReciclados && Object.keys(currentStats.tiposReciclados).length > 0 && (
         <div className="material-breakdown-section">
-          <h3>📊 Desglose por Material</h3>
+          <h3>📊 Desglose por Material {isCommerce ? 'Recibido' : ''}</h3>
           <div className="material-chart">
-            {Object.entries(stats.tiposReciclados).map(([tipo, cantidad]) => {
-              const percentage = (cantidad / stats.pesoTotal) * 100;
+            {Object.entries(currentStats.tiposReciclados).map(([tipo, cantidad]) => {
+              const percentage = (cantidad / currentStats.pesoTotal) * 100;
               const colors = {
                 'Plástico': '#FF6B6B',
                 'Vidrio': '#4ECDC4',
@@ -492,8 +611,8 @@ function Profile() {
         </div>
       )}
 
-      {/* Mini sección de logros más recientes */}
-      {achievements.length > 0 && (
+      {/* Mini sección de logros más recientes - Solo para usuarios recicladores */}
+      {!isCommerce && achievements.length > 0 && (
         <div className="achievements-section">
           <h3>🏆 Logros Recientes</h3>
           <div className="achievements-grid">
@@ -531,59 +650,75 @@ function Profile() {
           <div className="detailed-stats-content">
             <div className="stats-row">
               <div className="stat-detail">
-                <span className="stat-label">Primer reciclaje:</span>
+                <span className="stat-label">{isCommerce ? 'Primer reciclaje recibido:' : 'Primer reciclaje:'}</span>
                 <span className="stat-value">
-                  {stats?.primerReciclaje ? 
-                    new Date(stats.primerReciclaje).toLocaleDateString('es-AR') : 
+                  {currentStats?.primerReciclaje ?
+                    new Date(currentStats.primerReciclaje).toLocaleDateString('es-AR') :
                     'Sin datos'
                   }
                 </span>
               </div>
-              
+
               <div className="stat-detail">
-                <span className="stat-label">Último reciclaje:</span>
+                <span className="stat-label">{isCommerce ? 'Último reciclaje recibido:' : 'Último reciclaje:'}</span>
                 <span className="stat-value">
-                  {stats?.ultimoReciclaje ? 
-                    new Date(stats.ultimoReciclaje).toLocaleDateString('es-AR') : 
+                  {currentStats?.ultimoReciclaje ?
+                    new Date(currentStats.ultimoReciclaje).toLocaleDateString('es-AR') :
                     'Sin datos'
                   }
                 </span>
               </div>
             </div>
-            
+
             <div className="stats-row">
               <div className="stat-detail">
-                <span className="stat-label">Promedio por reciclaje:</span>
+                <span className="stat-label">{isCommerce ? 'Promedio por recepción:' : 'Promedio por reciclaje:'}</span>
                 <span className="stat-value">
-                  {stats?.totalReciclajes > 0 ? 
-                    ((stats.pesoTotal / stats.totalReciclajes).toFixed(2) + ' kg') : 
+                  {currentStats?.totalReciclajes > 0 ?
+                    ((currentStats.pesoTotal / currentStats.totalReciclajes).toFixed(2) + ' kg') :
                     '0 kg'
                   }
                 </span>
               </div>
-              
+
               <div className="stat-detail">
                 <span className="stat-label">Puntos por kg:</span>
                 <span className="stat-value">
-                  {stats?.pesoTotal > 0 ? 
-                    (stats.puntosTotal / stats.pesoTotal).toFixed(1) : 
+                  {currentStats?.pesoTotal > 0 ?
+                    ((currentStats.puntosTotal || currentStats.totalPuntos || 0) / currentStats.pesoTotal).toFixed(1) :
                     '0'
                   } pts/kg
                 </span>
               </div>
             </div>
-            
-            <div className="stats-row">
-              <div className="stat-detail">
-                <span className="stat-label">Puntos visitados:</span>
-                <span className="stat-value">{stats?.puntosVisitados?.size || 0} diferentes</span>
+
+            {!isCommerce && (
+              <div className="stats-row">
+                <div className="stat-detail">
+                  <span className="stat-label">Puntos visitados:</span>
+                  <span className="stat-value">{stats?.puntosVisitados?.size || 0} diferentes</span>
+                </div>
+
+                <div className="stat-detail">
+                  <span className="stat-label">Mejor racha:</span>
+                  <span className="stat-value">{stats?.mejorRacha || 0} días seguidos</span>
+                </div>
               </div>
-              
-              <div className="stat-detail">
-                <span className="stat-label">Mejor racha:</span>
-                <span className="stat-value">{stats?.mejorRacha || 0} días seguidos</span>
+            )}
+
+            {isCommerce && (
+              <div className="stats-row">
+                <div className="stat-detail">
+                  <span className="stat-label">Usuarios únicos atendidos:</span>
+                  <span className="stat-value">{commerceStats?.usuariosAtendidos || 0} personas</span>
+                </div>
+
+                <div className="stat-detail">
+                  <span className="stat-label">Tipos de material diferentes:</span>
+                  <span className="stat-value">{Object.keys(commerceStats?.tiposReciclados || {}).length} tipos</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
@@ -598,11 +733,13 @@ function Profile() {
           {refreshing ? '🔄 Actualizando...' : '🔄 Actualizar Datos'}
         </button>
         <button className="profile-btn secondary" onClick={handleViewStatistics}>
-          📊 Ver Estadísticas Completas
+          📊 {isCommerce ? 'Ver Estadísticas de Recepción' : 'Ver Estadísticas Completas'}
         </button>
-        <button className="profile-btn secondary" onClick={handleViewAllAchievements}>
-          🏆 Ver Todos los Logros
-        </button>
+        {!isCommerce && (
+          <button className="profile-btn secondary" onClick={handleViewAllAchievements}>
+            🏆 Ver Todos los Logros
+          </button>
+        )}
       </div>
     </div>
   );

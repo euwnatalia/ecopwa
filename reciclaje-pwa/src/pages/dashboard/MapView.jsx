@@ -6,7 +6,10 @@ import {
   InfoWindow
 } from "@react-google-maps/api";
 import API_URL from "../../config/api.js";
+import PuntoForm from "../../components/PuntoForm.jsx";
+import { MATERIALES, getMaterialByValue } from "../../constants/materiales.js";
 import "./Map.css";
+import "../../styles/map-popups-optimization.css";
 
 const API_KEY = "AIzaSyDogeXjIze7GDPF1IOOkgX3acOgBvPqPv0";
 const CONTAINER_STYLE = { width: "100%", height: "70vh", minHeight: "500px" };
@@ -23,14 +26,11 @@ export default function MapView() {
   const [mostrarIntro, setMostrarIntro] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [puntoTemporal, setPuntoTemporal] = useState(null);
+  const [mostrarModalReporte, setMostrarModalReporte] = useState(false);
+  const [puntoAReportar, setPuntoAReportar] = useState(null);
 
-  const tiposDisponibles = [
-    { value: "Plástico", label: "🥤 Plástico", color: "#2196F3" },
-    { value: "Vidrio", label: "🫙 Vidrio", color: "#4CAF50" },
-    { value: "Cartón", label: "📦 Cartón", color: "#FF9800" },
-    { value: "Papel", label: "📄 Papel", color: "#9C27B0" },
-    { value: "Metal", label: "🥫 Metal", color: "#607D8B" }
-  ];
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: API_KEY
@@ -117,28 +117,57 @@ export default function MapView() {
     aplicarFiltros();
   }, [filtroEstado, puntosOriginales]);
 
+  // Actualización automática cada 30 segundos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!mostrarFormulario && !mostrarModalReporte && !loading) {
+        loadPuntos();
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [mostrarFormulario, mostrarModalReporte, loading]);
+
   // Obtener color del marcador según tipo y estado
   const getMarkerIcon = (punto) => {
-    const tipo = tiposDisponibles.find(t => t.value === punto.tipo);
-    const color = tipo?.color || '#666666';
+    // Soporte para múltiples materiales
+    let color = '#666666'; // color por defecto
     
-    // Diferentes iconos según rating y estado
-    let symbol = '📍';
-    if (punto.activo === false) {
-      symbol = '❌';
-    } else if (punto.rating === 'excelente') {
-      symbol = '⭐';
-    } else if (punto.rating === 'bueno') {
-      symbol = '👍';
-    } else if (punto.rating === 'malo') {
-      symbol = '⚠️';
+    if (Array.isArray(punto.tipos) && punto.tipos.length > 0) {
+      // Si tiene múltiples tipos, usar el color del primer tipo
+      const material = getMaterialByValue(punto.tipos[0]);
+      color = material.color;
+    } else if (punto.tipo) {
+      // Compatibilidad con formato antiguo
+      const material = getMaterialByValue(punto.tipo);
+      color = material.color;
     }
+    
+    // Usar icono del material en lugar de simbolos genericos
+
+    let symbol = '♻️'; // icono por defecto
+
+    if (punto.activo === false) {
+      symbol = '❌'; // mantener X para puntos inactivos
+    } else if (Array.isArray(punto.tipos) && punto.tipos.length > 0) {
+      // Usar el icono del primer material
+      const material = getMaterialByValue(punto.tipos[0]);
+      symbol = material.icon;
+    } else if (punto.tipo) {
+      // Compatibilidad con formato antiguo
+      const material = getMaterialByValue(punto.tipo);
+      symbol = material.icon;
+    }    
+    // Si tiene múltiples tipos, agregar indicador
+    const isMultiple = (Array.isArray(punto.tipos) && punto.tipos.length > 1);
     
     return {
       url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
         `<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg">
           <circle cx="20" cy="20" r="15" fill="${color}" stroke="white" stroke-width="3"/>
+          ${isMultiple ? '<circle cx="32" cy="8" r="6" fill="#FF9800" stroke="white" stroke-width="2"/>' : ''}
           <text x="20" y="25" text-anchor="middle" font-size="16">${symbol}</text>
+          ${isMultiple ? '<text x="32" y="12" text-anchor="middle" font-size="10" fill="white">+</text>' : ''}
         </svg>`
       )}`,
       scaledSize: new window.google.maps.Size(40, 40),
@@ -146,30 +175,47 @@ export default function MapView() {
     };
   };
 
-  // Manejar clics en el mapa para registrar nuevos puntos
-  const handleMapClick = async (e) => {
-    if (!modoRegistro) return;
-    
-    const lat = e.latLng.lat();
-    const lng = e.latLng.lng();
-    
-    // Mostrar modal de registro (implementaremos después)
-    registrarNuevoPunto(lat, lng);
+  // Función para obtener dirección desde coordenadas
+  const obtenerDireccion = async (lat, lng) => {
+    try {
+      const geocoder = new window.google.maps.Geocoder();
+      const response = await geocoder.geocode({
+        location: { lat, lng }
+      });
+      
+      if (response.results && response.results[0]) {
+        return response.results[0].formatted_address;
+      }
+      return "";
+    } catch (error) {
+      console.error("Error obteniendo dirección:", error);
+      return "";
+    }
   };
 
-  const registrarNuevoPunto = async (lat, lng) => {
-    const nombre = prompt("Nombre del punto de reciclaje:");
-    if (!nombre) return;
-
-    const tipoOptions = tiposDisponibles.map(t => t.value).join(", ");
-    const tipo = prompt(`Tipo de material (${tipoOptions}):`);
-    if (!tipo || !tiposDisponibles.find(t => t.value === tipo)) {
-      alert("Tipo inválido. Debe ser uno de: " + tipoOptions);
+  // Manejar clics en el mapa para registrar nuevos puntos
+  const handleMapClick = async (e) => {
+    // Solo registrar si está en modo registro y no hay formulario abierto
+    if (!modoRegistro || mostrarFormulario) {
+      // Si hay un punto seleccionado y hacemos click fuera, cerrarlo
+      if (selected && !modoRegistro) {
+        setSelected(null);
+      }
       return;
     }
 
-    const direccion = prompt("Dirección (opcional):") || "";
+    const lat = e.latLng.lat();
+    const lng = e.latLng.lng();
 
+    setLoading(true);
+    const direccion = await obtenerDireccion(lat, lng);
+
+    setPuntoTemporal({ lat, lng, direccion });
+    setMostrarFormulario(true);
+    setLoading(false);
+  };
+
+  const handleSubmitPunto = async (formData) => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -179,7 +225,7 @@ export default function MapView() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ nombre, lat, lng, tipo, direccion })
+        body: JSON.stringify(formData)
       });
 
       if (!response.ok) {
@@ -187,14 +233,21 @@ export default function MapView() {
         throw new Error(err.error || response.statusText);
       }
 
-      alert("✅ Punto registrado exitosamente!");
+      window.showToast && window.showToast("✅ Punto registrado exitosamente", "success");
+      setMostrarFormulario(false);
+      setPuntoTemporal(null);
       setModoRegistro(false);
       loadPuntos();
     } catch (err) {
-      alert("Error al registrar punto: " + err.message);
+      window.showToast && window.showToast("Error al registrar punto: " + err.message, "error");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancelForm = () => {
+    setMostrarFormulario(false);
+    setPuntoTemporal(null);
   };
 
   // Validar punto
@@ -214,30 +267,40 @@ export default function MapView() {
         throw new Error(err.error || response.statusText);
       }
 
+
       const result = await response.json();
-      alert(`✅ ${result.message}`);
+      window.showToast && window.showToast(`✅ ${result.message}`, "success");
+
+      // Actualizar el punto seleccionado si es el mismo
+      if (selected && selected.id === puntoId) {
+        setSelected({
+          ...selected,
+          validaciones: result.validaciones,
+          invalidaciones: result.invalidaciones,
+          rating: result.rating
+        });
+      }
+
       loadPuntos();
     } catch (err) {
-      alert("Error al validar punto: " + err.message);
+      window.showToast && window.showToast("Error al validar punto: " + err.message, "error");
     }
   };
 
-  // Invalidar punto
-  const invalidarPunto = async (puntoId) => {
-    const motivo = prompt(
-      "¿Por qué invalidas este punto?\n" +
-      "- Ya no existe\n" +
-      "- Ubicación incorrecta\n" +
-      "- No acepta este material\n" +
-      "- Otro motivo:"
-    );
-    
-    if (!motivo) return;
+  // Mostrar modal de reporte
+  const mostrarReporte = (punto) => {
+    setPuntoAReportar(punto);
+    setMostrarModalReporte(true);
+  };
+
+  // Invalidar punto con motivo
+  const invalidarPunto = async (motivo) => {
+    if (!puntoAReportar || !motivo) return;
 
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `${API_URL}/puntos/${puntoId}/invalidar`,
+        `${API_URL}/puntos/${puntoAReportar.id}/invalidar`,
         {
           method: "PUT",
           headers: {
@@ -254,10 +317,26 @@ export default function MapView() {
       }
 
       const result = await response.json();
-      alert(`⚠️ ${result.message}`);
+      window.showToast && window.showToast(`👎 ${result.message}`, "warning");
+
+      // Actualizar el punto seleccionado si es el mismo
+      if (selected && selected.id === puntoAReportar.id) {
+        setSelected({
+          ...selected,
+          validaciones: result.validaciones,
+          invalidaciones: result.invalidaciones,
+          rating: result.rating,
+          activo: result.activo,
+          motivoReporte: result.activo === false ? motivo : selected.motivoReporte,
+          fechaReporte: result.activo === false ? new Date().toISOString() : selected.fechaReporte
+        });
+      }
+
+      setMostrarModalReporte(false);
+      setPuntoAReportar(null);
       loadPuntos();
     } catch (err) {
-      alert("Error al invalidar punto: " + err.message);
+      window.showToast && window.showToast("Error al reportar punto: " + err.message, "error");
     }
   };
 
@@ -341,9 +420,9 @@ export default function MapView() {
                 disabled={loading}
               >
                 <option value="">🔍 Todos los materiales</option>
-                {tiposDisponibles.map(t => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
+                {MATERIALES.map(material => (
+                  <option key={material.value} value={material.value}>
+                    {material.label}
                   </option>
                 ))}
               </select>
@@ -387,7 +466,8 @@ export default function MapView() {
                 zoomControl: true,
                 mapTypeControl: false,
                 streetViewControl: false,
-                fullscreenControl: true
+                fullscreenControl: true,
+                clickableIcons: false
               }}
             >
               {/* Marcador de usuario */}
@@ -415,7 +495,7 @@ export default function MapView() {
                   position={{ lat: punto.lat, lng: punto.lng }}
                   icon={isLoaded ? getMarkerIcon(punto) : undefined}
                   onClick={() => setSelected(punto)}
-                  title={`${punto.nombre} (${punto.tipo})`}
+                  title={`${punto.nombre}${Array.isArray(punto.tipos) ? ` (${punto.tipos.length} materiales)` : punto.tipo ? ` (${punto.tipo})` : ''}`}
                 />
               ))}
 
@@ -428,7 +508,28 @@ export default function MapView() {
                   <div className="info-window">
                     <h4>{selected.nombre}</h4>
                     <div className="info-details">
-                      <p><strong>Material:</strong> {selected.tipo}</p>
+                      {/* Mostrar tipos de materiales */}
+                      <div className="materiales-info">
+                        <strong>Materiales:</strong>
+                        <div className="materiales-list">
+                          {Array.isArray(selected.tipos) && selected.tipos.length > 0 ? (
+                            selected.tipos.map(tipo => {
+                              const material = getMaterialByValue(tipo);
+                              return (
+                                <span key={tipo} className="material-tag" style={{backgroundColor: material.color}}>
+                                  {material.icon} {material.label}
+                                </span>
+                              );
+                            })
+                          ) : selected.tipo ? (
+                            <span className="material-tag" style={{backgroundColor: getMaterialByValue(selected.tipo).color}}>
+                              {getMaterialByValue(selected.tipo).icon} {getMaterialByValue(selected.tipo).label}
+                            </span>
+                          ) : (
+                            <span className="no-materials">Sin información de materiales</span>
+                          )}
+                        </div>
+                      </div>
                       {selected.direccion && (
                         <p><strong>Dirección:</strong> {selected.direccion}</p>
                       )}
@@ -449,6 +550,45 @@ export default function MapView() {
                           {selected.rating === 'malo' && '⚠️ Malo'}
                         </span>
                       </div>
+                      {/* Mostrar motivo del reporte si está inactivo o tiene reportes */}
+                      {(selected.activo === false || selected.motivoReporte || selected.ultimoMotivoInvalidacion) && (
+                        <div className="reporte-info" style={{
+                          backgroundColor: selected.activo === false ? "#ffebee" : "#fff3e0",
+                          padding: "0.5rem",
+                          borderRadius: "8px",
+                          marginTop: "0.5rem",
+                          border: selected.activo === false ? "1px solid #ffcdd2" : "1px solid #ffe0b2"
+                        }}>
+                          <p style={{
+                            margin: 0,
+                            fontSize: "0.85rem",
+                            color: selected.activo === false ? "#c62828" : "#ef6c00"
+                          }}>
+                            <strong>{selected.activo === false ? "❌ Punto inactivo" : "⚠️ Último reporte"}:</strong>
+                            <br />
+                            {selected.motivoReporte || selected.ultimoMotivoInvalidacion || "Sin motivo especificado"}
+                          </p>
+                          {(selected.fechaReporte || selected.fechaUltimaInvalidacion) && (
+                            <p style={{
+                              margin: "0.25rem 0 0 0",
+                              fontSize: "0.75rem",
+                              color: "#666"
+                            }}>
+                              {selected.activo === false ? "Inactivado" : "Reportado"}: {new Date(selected.fechaReporte || selected.fechaUltimaInvalidacion).toLocaleDateString()}
+                            </p>
+                          )}
+                          {selected.reportes && selected.reportes.length > 1 && (
+                            <p style={{
+                              margin: "0.25rem 0 0 0",
+                              fontSize: "0.75rem",
+                              color: "#666",
+                              fontStyle: "italic"
+                            }}>
+                              📊 {selected.reportes.length} reportes total
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       {/* Estadísticas */}
                       <div className="punto-stats">
@@ -472,7 +612,7 @@ export default function MapView() {
                             </button>
                             <button 
                               className="btn-action btn-invalidar"
-                              onClick={() => invalidarPunto(selected.id)}
+                              onClick={() => mostrarReporte(selected)}
                             >
                               👎 Reportar
                             </button>
@@ -495,6 +635,135 @@ export default function MapView() {
           </div>
         </>
       )}
+
+      {/* Modal para crear punto */}
+      {mostrarFormulario && puntoTemporal && (
+        <div className="modal-overlay" onClick={handleCancelForm}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <PuntoForm
+              onSubmit={handleSubmitPunto}
+              onCancel={handleCancelForm}
+              initialData={puntoTemporal}
+              isLoading={loading}
+              title="Agregar Punto de Reciclaje"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Modal para reportar punto */}
+      {mostrarModalReporte && puntoAReportar && (
+        <ReportModal
+          punto={puntoAReportar}
+          onReport={invalidarPunto}
+          onCancel={() => {
+            setMostrarModalReporte(false);
+            setPuntoAReportar(null);
+          }}
+          isLoading={loading}
+        />
+      )}
+    </div>
+  );
+}
+
+// Componente Modal de Reporte
+function ReportModal({ punto, onReport, onCancel, isLoading }) {
+  const [selectedMotivo, setSelectedMotivo] = useState('');
+  const [otroMotivo, setOtroMotivo] = useState('');
+
+  const motivosComunes = [
+    { id: 'no_existe', label: 'Ya no existe', icon: '🚫' },
+    { id: 'ubicacion_incorrecta', label: 'Ubicación incorrecta', icon: '📍' },
+    { id: 'no_acepta_material', label: 'No acepta este material', icon: '❌' },
+    { id: 'cerrado_permanente', label: 'Cerrado permanentemente', icon: '🔒' },
+    { id: 'horarios_incorrectos', label: 'Horarios incorrectos', icon: '⏰' },
+    { id: 'otro', label: 'Otro motivo', icon: '💬' }
+  ];
+
+  const handleSubmit = () => {
+    const motivo = selectedMotivo === 'otro' ? otroMotivo : 
+                   motivosComunes.find(m => m.id === selectedMotivo)?.label || '';
+    
+    if (!motivo.trim()) {
+      window.showToast && window.showToast('Por favor seleccioná un motivo', 'warning');
+      return;
+    }
+
+    onReport(motivo);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="report-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="report-header">
+          <h3>🚨 Reportar Punto</h3>
+          <button className="close-btn" onClick={onCancel}>×</button>
+        </div>
+        
+        <div className="report-content">
+          <div className="punto-info">
+            <h4>{punto.nombre}</h4>
+            <p>{punto.direccion}</p>
+          </div>
+
+          <div className="motivos-section">
+            <h4>¿Cuál es el problema?</h4>
+            <div className="motivos-grid">
+              {motivosComunes.map(motivo => (
+                <label 
+                  key={motivo.id} 
+                  className={`motivo-option ${selectedMotivo === motivo.id ? 'selected' : ''}`}
+                >
+                  <input
+                    type="radio"
+                    name="motivo"
+                    value={motivo.id}
+                    checked={selectedMotivo === motivo.id}
+                    onChange={(e) => setSelectedMotivo(e.target.value)}
+                  />
+                  <div className="motivo-content">
+                    <span className="motivo-icon">{motivo.icon}</span>
+                    <span className="motivo-text">{motivo.label}</span>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {selectedMotivo === 'otro' && (
+            <div className="otro-motivo">
+              <label htmlFor="otro-motivo-text">Describí el problema:</label>
+              <textarea
+                id="otro-motivo-text"
+                value={otroMotivo}
+                onChange={(e) => setOtroMotivo(e.target.value)}
+                placeholder="Explicanos qué problema tiene este punto..."
+                rows={3}
+                maxLength={200}
+              />
+              <div className="char-count">{otroMotivo.length}/200</div>
+            </div>
+          )}
+
+          <div className="report-actions">
+            <button 
+              className="btn-cancel" 
+              onClick={onCancel}
+              disabled={isLoading}
+            >
+              Cancelar
+            </button>
+            <button 
+              className="btn-report" 
+              onClick={handleSubmit}
+              disabled={isLoading || !selectedMotivo}
+            >
+              {isLoading ? 'Reportando...' : '🚨 Reportar'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

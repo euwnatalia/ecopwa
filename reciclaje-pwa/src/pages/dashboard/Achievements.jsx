@@ -65,8 +65,15 @@ function Achievements({ userDetails }) {
   };
 
   const formatearFecha = (fechaISO) => {
-    if (!fechaISO) return 'N/A';
+    if (!fechaISO) return 'Fecha no disponible';
+
     const fecha = new Date(fechaISO);
+
+    // Verificar si la fecha es válida
+    if (isNaN(fecha.getTime())) {
+      return 'Fecha inválida';
+    }
+
     return fecha.toLocaleDateString('es-AR', {
       year: 'numeric',
       month: 'short',
@@ -77,19 +84,19 @@ function Achievements({ userDetails }) {
   };
 
   const formatearMes = (mesString) => {
-    if (!mesString || typeof mesString !== 'string') return 'N/A';
+    if (!mesString || typeof mesString !== 'string') return 'Mes no disponible';
     try {
       const [year, month] = mesString.split('-');
-      if (!year || !month) return 'N/A';
+      if (!year || !month) return 'Mes no disponible';
       const fecha = new Date(parseInt(year), parseInt(month) - 1);
-      if (isNaN(fecha.getTime())) return 'N/A';
+      if (isNaN(fecha.getTime())) return 'Mes inválido';
       return fecha.toLocaleDateString('es-AR', {
         year: 'numeric',
         month: 'long'
       });
     } catch (error) {
       console.error('Error formateando mes:', error);
-      return 'N/A';
+      return 'Error en formato de mes';
     }
   };
 
@@ -318,8 +325,8 @@ function Achievements({ userDetails }) {
       {vistaActual === 'historial' && (
         <div className="vista-historial">
           <div className="section-header">
-            <h2>📝 Historial Completo</h2>
-            <p>{reciclajes.length} reciclajes registrados</p>
+            <h2>📝 {isComercio ? 'Reciclajes Recibidos en tu Comercio' : 'Historial Completo'}</h2>
+            <p>{reciclajes.length} {isComercio ? 'reciclajes procesados' : 'reciclajes registrados'}</p>
           </div>
           
           <div className="historial-list">
@@ -336,18 +343,36 @@ function Achievements({ userDetails }) {
                     </span>
                   </div>
                   <div className="historial-details">
-                    <span className="historial-punto">
-                      📍 {reciclaje.puntoReciclaje?.nombre || 'Punto no especificado'}
-                    </span>
-                    {reciclaje.puntosObtenidos && (
-                      <span className="historial-puntos">
-                        💎 +{reciclaje.puntosObtenidos} puntos
-                      </span>
-                    )}
-                    {reciclaje.distancia && (
-                      <span className="historial-distancia">
-                        📏 {reciclaje.distancia.toFixed(1)}km
-                      </span>
+                    {isComercio ? (
+                      <>
+                        <span className="historial-usuario">
+                          👤 Usuario: {reciclaje.usuario || 'Usuario anónimo'}
+                        </span>
+                        {reciclaje.puntosObtenidos && (
+                          <span className="historial-puntos">
+                            💎 Puntos otorgados: +{reciclaje.puntosObtenidos}
+                          </span>
+                        )}
+                        <span className="historial-comercio">
+                          🏪 Procesado en tu comercio
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="historial-punto">
+                          📍 {reciclaje.puntoReciclaje?.nombre || 'Punto no especificado'}
+                        </span>
+                        {reciclaje.puntosObtenidos && (
+                          <span className="historial-puntos">
+                            💎 +{reciclaje.puntosObtenidos} puntos
+                          </span>
+                        )}
+                        {reciclaje.distancia && (
+                          <span className="historial-distancia">
+                            📏 {reciclaje.distancia.toFixed(1)}km
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                   {reciclaje.codigo && (
@@ -365,8 +390,8 @@ function Achievements({ userDetails }) {
             {reciclajes.length === 0 && (
               <div className="empty-historial">
                 <div className="empty-icon">📦</div>
-                <h3>No hay reciclajes aún</h3>
-                <p>¡Comienza escaneando tu primer producto!</p>
+                <h3>{isComercio ? 'No has recibido reciclajes aún' : 'No hay reciclajes aún'}</h3>
+                <p>{isComercio ? '¡Cuando proceses tu primer reciclaje aparecerá aquí!' : '¡Comienza escaneando tu primer producto!'}</p>
               </div>
             )}
           </div>

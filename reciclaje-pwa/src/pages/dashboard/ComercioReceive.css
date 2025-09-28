@@ -205,6 +205,29 @@
   margin-bottom: 0.5rem;
 }
 
+.receive-location {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.receive-place,
+.receive-original {
+  font-size: 0.85rem;
+  color: #2E7D32;
+  background: #E8F5E8;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid #A5D6A7;
+}
+
+.receive-original {
+  color: #666;
+  background: #f8f9fa;
+  border-color: #ddd;
+}
+
 .receive-user,
 .receive-date {
   font-size: 0.9rem;

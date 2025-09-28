@@ -19,6 +19,8 @@ function LoginPage({ setUser }) {
   const [userData, setUserData] = useState(null);
   const [filtroTipo, setFiltroTipo] = useState("");
   const [selectedPunto, setSelectedPunto] = useState(null);
+  const [showGameInfo, setShowGameInfo] = useState(false);
+  const [selectedUserType, setSelectedUserType] = useState(null);
   
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: API_KEY
@@ -32,6 +34,101 @@ function LoginPage({ setUser }) {
     { value: "Metal", label: "🥫 Metal", color: "#607D8B" }
   ];
 
+// Seleccionar tipo de usuario y hacer login directamente
+const handleSelectUserType = async (tipo) => {
+  setSelectedUserType(tipo);
+  setLoading(true);
+  setError(null);
+
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    const token = await user.getIdToken();
+    localStorage.setItem("token", token);
+
+    // Verificar si el usuario ya existe en la base de datos
+    const res = await fetch(`${API_URL}/usuarios`, {
+      method: "GET",
+      headers: {
+        "Authorization": "Bearer " + token
+      }
+    });
+
+    if (res.status === 404) {
+      // Usuario nuevo - usar el tipo seleccionado
+      const payload = {
+        uid: user.uid,
+        nombre: user.displayName,
+        email: user.email,
+        tipo: tipo
+      };
+
+      if (tipo === 'comercio') {
+        // Para comercios, mostrar el formulario completo
+        setUserData({
+          uid: user.uid,
+          nombre: user.displayName,
+          email: user.email,
+          token: token
+        });
+        setShowRegistration(true);
+        setSelectedUserType(tipo); // Mantener la selección para el modal
+        setLoading(false);
+        return;
+      } else {
+        // Para usuarios regulares, crear directamente
+        const createRes = await fetch(`${API_URL}/usuarios`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!createRes.ok) {
+          const err = await createRes.json();
+          throw new Error(err.error || "Error al crear usuario");
+        }
+      }
+
+      setUser({
+        uid: user.uid,
+        nombre: user.displayName,
+        email: user.email,
+        tipo: tipo
+      });
+      window.location.href = "/dashboard";
+    } else if (res.ok) {
+      // Usuario existente - usar su tipo guardado en la DB (ignorar selección)
+      const data = await res.json();
+      setUser({
+        uid: user.uid,
+        nombre: user.displayName,
+        email: user.email,
+        tipo: data.tipo
+      });
+      window.location.href = "/dashboard";
+    } else {
+      const err = await res.json();
+      throw new Error(err.error || "Error de servidor");
+    }
+
+  } catch (e) {
+    console.error("Error en el login:", e);
+    if (e.message.includes("auth/popup")) {
+      setError("Error al abrir la ventana de Google. Verificá que tu navegador permita ventanas emergentes.");
+    } else if (e.message.includes("Failed to fetch") || e.message.includes("NetworkError")) {
+      setError("No se pudo conectar al servidor. Verificá tu conexión a internet.");
+    } else {
+      setError("Error al iniciar sesión: " + e.message);
+    }
+  } finally {
+    setLoading(false);
+    setSelectedUserType(null); // Limpiar selección después del intento
+  }
+};
+
 const handleLogin = async () => {
     setLoading(true);
     setError(null);
@@ -42,6 +139,7 @@ const handleLogin = async () => {
       const token = await user.getIdToken();
       localStorage.setItem("token", token);
 
+      // Verificar si el usuario ya existe en la base de datos
       const res = await fetch(`${API_URL}/usuarios`, {
         method: "GET",
         headers: {
@@ -50,6 +148,7 @@ const handleLogin = async () => {
       });
 
       if (res.status === 404) {
+        // Usuario nuevo - mostrar selección de tipo
         setUserData({
           uid: user.uid,
           nombre: user.displayName,
@@ -65,6 +164,7 @@ const handleLogin = async () => {
         throw new Error(err.error || "Error de servidor");
       }
 
+      // Usuario existente - usar su tipo guardado en la DB
       const data = await res.json();
       setUser({
         uid: user.uid,
@@ -76,7 +176,13 @@ const handleLogin = async () => {
 
     } catch (e) {
       console.error("Error en el login:", e);
-      setError("No pudimos iniciar sesión. " + e.message);
+      if (e.message.includes("auth/popup")) {
+        setError("Error al abrir la ventana de Google. Verificá que tu navegador permita ventanas emergentes.");
+      } else if (e.message.includes("Failed to fetch") || e.message.includes("NetworkError")) {
+        setError("No se pudo conectar al servidor. Verificá tu conexión a internet.");
+      } else {
+        setError("Error al iniciar sesión: " + e.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -162,25 +268,84 @@ if (showRegistration) {
       <div className="login-left-panel">
         <div className="login-content">
           <h1 className="login-title">
-            Bienvenido a <span>EcoPWA ♻️</span>
+            Bienvenido a <span>reciclAR ♻️</span>
           </h1>
-          <p className="login-subtitle">Iniciá sesión para comenzar a reciclar</p>
+          <p className="login-subtitle">¿Cómo querés participar en el reciclaje?</p>
+          <p className="login-hint">Elegí una opción para continuar</p>
+
+          <div className="user-selection-cards">
+            <div
+              className={`user-card primary-card ${selectedUserType === 'usuario' ? 'selected' : ''} ${loading ? 'disabled' : ''}`}
+              onClick={() => !loading && handleSelectUserType('usuario')}
+            >
+              <div className="card-icon">♻️</div>
+              <h3>Soy Reciclador</h3>
+              <p>Registrá tus reciclajes, acumulá puntos y ganá premios</p>
+              <div className="card-action">
+                {loading && selectedUserType === 'usuario' ? 'Iniciando sesión...' : 'Hacer clic para iniciar sesión'}
+              </div>
+            </div>
+
+            <div
+              className={`user-card primary-card ${selectedUserType === 'comercio' ? 'selected' : ''} ${loading ? 'disabled' : ''}`}
+              onClick={() => !loading && handleSelectUserType('comercio')}
+            >
+              <div className="card-icon">🏪</div>
+              <h3>Soy un Comercio</h3>
+              <p>Sumá tu local como punto verde y ayudá a la comunidad</p>
+              <div className="card-action">
+                {loading && selectedUserType === 'comercio' ? 'Iniciando sesión...' : 'Hacer clic para iniciar sesión'}
+              </div>
+            </div>
+          </div>
+
+          <div className="gamification-section">
+            <button className="gamification-link" onClick={() => setShowGameInfo(true)}>
+              <span className="gamification-icon">🏆</span>
+              <span className="gamification-text">
+                <strong>Sistema de Gamificación</strong>
+                <small>Descubrí cómo funciona nuestro sistema de puntos y recompensas</small>
+              </span>
+              <span className="gamification-arrow">→</span>
+            </button>
+          </div>
+
 
           {error && <div className="login-error">{error}</div>}
 
-          <button
-            onClick={handleLogin}
-            className="login-button"
-            disabled={loading}
-          >
-            <span className="button-icon">🔐</span>
-            <span className="button-text">
-              {loading ? "Cargando..." : "Iniciar Sesión / Registrarse"}
-            </span>
-            <span className="button-arrow">→</span>
-          </button>
-
           <p className="login-slogan">Pequeñas acciones, grandes cambios 🌍</p>
+
+          {showGameInfo && (
+            <div className="game-info-modal" onClick={() => setShowGameInfo(false)}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <button className="modal-close" onClick={() => setShowGameInfo(false)}>×</button>
+                <h3>🏆 ¿Cómo funciona la Gamificación?</h3>
+                <div className="game-features">
+                  <div className="feature">
+                    <div className="feature-icon">📊</div>
+                    <div>
+                      <strong>Puntos por Reciclaje</strong>
+                      <p>Ganá puntos según la cantidad y distancia de tus reciclajes</p>
+                    </div>
+                  </div>
+                  <div className="feature">
+                    <div className="feature-icon">🏅</div>
+                    <div>
+                      <strong>Logros y Niveles</strong>
+                      <p>Desbloqueá badges especiales y subí de nivel</p>
+                    </div>
+                  </div>
+                  <div className="feature">
+                    <div className="feature-icon">📈</div>
+                    <div>
+                      <strong>Ranking</strong>
+                      <p>Competí con otros usuarios y mirá tu impacto ambiental</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -315,7 +480,7 @@ function RegistrationModal({ userData, onRegister, onBack, loading, error, isLoa
       onRegister('usuario');
     } else {
       if (!formData.ubicacion || formData.tiposReciclaje.length === 0) {
-        alert('Por favor completa todos los campos requeridos');
+        window.showToast && window.showToast('Por favor completa todos los campos requeridos', 'warning');
         return;
       }
       onRegister('comercio', formData);

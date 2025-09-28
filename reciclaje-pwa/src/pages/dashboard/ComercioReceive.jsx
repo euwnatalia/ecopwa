@@ -110,8 +110,8 @@ function ComercioReceive() {
         throw new Error(data.error || "Error al procesar el reciclaje");
       }
 
-      setSuccess(`✅ Reciclaje procesado exitosamente! ${data.puntos} puntos otorgados a ${data.usuario}`);
-      
+      setSuccess(`✅ Reciclaje procesado exitosamente! ${data.puntos} puntos otorgados a ${data.usuario}. El reciclaje aparecerá en su historial como procesado en ${userDetails?.nombre || 'tu comercio'}.`);
+
       // Limpiar formulario
       setFormData({
         codigoUsuario: "",
@@ -131,7 +131,15 @@ function ComercioReceive() {
   };
 
   const formatearFecha = (fechaISO) => {
+    if (!fechaISO) return 'Fecha no disponible';
+
     const fecha = new Date(fechaISO);
+
+    // Verificar si la fecha es válida
+    if (isNaN(fecha.getTime())) {
+      return 'Fecha inválida';
+    }
+
     return fecha.toLocaleDateString('es-AR', {
       year: 'numeric',
       month: 'short',
@@ -274,7 +282,14 @@ function ComercioReceive() {
                     <span className="receive-user">👤 {reciclaje.usuario}</span>
                     <span className="receive-date">📅 {formatearFecha(reciclaje.fechaCreacion)}</span>
                   </div>
-                  
+
+                  <div className="receive-location">
+                    <span className="receive-place">🏪 Procesado en: {userDetails?.nombre || 'Tu comercio'}</span>
+                    {reciclaje.comercio && reciclaje.comercio !== userDetails?.nombre && (
+                      <span className="receive-original">📍 Comercio original: {reciclaje.comercio}</span>
+                    )}
+                  </div>
+
                   {reciclaje.codigo && (
                     <div className="receive-code">
                       <span>🏷️ Código: {reciclaje.codigo}</span>

@@ -430,13 +430,25 @@
   font-weight: 500;
 }
 
-.historial-punto, .historial-puntos, .historial-distancia {
+.historial-punto, .historial-puntos, .historial-distancia, .historial-usuario, .historial-comercio {
   font-size: 0.9rem;
   color: #666;
   background: #f8f9fa;
   padding: 0.25rem 0.75rem;
   border-radius: 15px;
   white-space: nowrap;
+}
+
+.historial-usuario {
+  background: #E3F2FD;
+  color: #1976D2;
+  border: 1px solid #BBDEFB;
+}
+
+.historial-comercio {
+  background: #E8F5E8;
+  color: #2E7D32;
+  border: 1px solid #A5D6A7;
 }
 
 .historial-puntos {

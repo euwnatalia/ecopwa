@@ -535,11 +535,16 @@ async function recibirReciclaje(req, res) {
     const reciclaje = {
       tipo,
       cantidad: parseFloat(cantidad),
-      puntos: parseInt(puntos),
+      puntosObtenidos: parseInt(puntos), // Cambiado de 'puntos' a 'puntosObtenidos' para consistencia
       userId,
       comercioId,
       usuario: usuario.nombre,
       comercio: comercio.nombre,
+      puntoReciclaje: {
+        id: comercioId,
+        nombre: comercio.nombre || 'Comercio sin nombre',
+        tipo: 'comercio'
+      },
       fechaCreacion: new Date().toISOString(),
       estado: 'completado',
       metodo: 'comercio'
@@ -547,9 +552,11 @@ async function recibirReciclaje(req, res) {
 
     const ref = await db.collection('reciclajes').add(reciclaje);
     
-    res.status(201).json({ 
-      id: ref.id, 
+    res.status(201).json({
+      id: ref.id,
       ...reciclaje,
+      puntos: reciclaje.puntosObtenidos, // Para compatibilidad con el frontend
+      usuario: usuario.nombre,
       mensaje: 'Reciclaje procesado exitosamente'
     });
 
@@ -607,7 +614,7 @@ async function getEstadisticasComercio(req, res) {
     const stats = {
       totalReciclajes: lista.length,
       pesoTotal: lista.reduce((sum, r) => sum + (r.cantidad || 0), 0),
-      puntosOtorgados: lista.reduce((sum, r) => sum + (r.puntos || 0), 0),
+      puntosOtorgados: lista.reduce((sum, r) => sum + (r.puntosObtenidos || r.puntos || 0), 0),
       usuariosAtendidos: new Set(lista.map(r => r.userId)).size,
       tiposRecibidos: {},
       mejorMes: null,
