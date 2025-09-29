@@ -23,7 +23,11 @@ export default function MapView() {
   const [modoRegistro, setModoRegistro] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("activos");
-  const [mostrarIntro, setMostrarIntro] = useState(true);
+  const [mostrarIntro, setMostrarIntro] = useState(() => {
+    const hasSeenIntro = localStorage.getItem('mapIntroSeen');
+    return !hasSeenIntro;
+  });
+  const [mostrarTooltip, setMostrarTooltip] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -378,9 +382,14 @@ export default function MapView() {
               </div>
             </div>
             
-            <button 
+            <button
               className="btn-close-intro"
-              onClick={() => setMostrarIntro(false)}
+              onClick={() => {
+                setMostrarIntro(false);
+                localStorage.setItem('mapIntroSeen', 'true');
+                setMostrarTooltip(true);
+                setTimeout(() => setMostrarTooltip(false), 4000);
+              }}
             >
               ¡Entendido, empezar!
             </button>
@@ -390,13 +399,21 @@ export default function MapView() {
 
       {!mostrarIntro && (
         <>
+          {/* Tooltip de ayuda */}
+          {mostrarTooltip && (
+            <div className="help-tooltip">
+              <span>💡 Puedes ver la ayuda nuevamente presionando el botón ❓</span>
+            </div>
+          )}
+
           {/* Controles y filtros */}
           <div className="map-header">
             <div className="map-title">
               <h1>🗺️ Mapa de Reciclaje</h1>
-              <button 
-                className="btn-help"
+              <button
+                className={`btn-help ${mostrarTooltip ? 'pulse' : ''}`}
                 onClick={() => setMostrarIntro(true)}
+                title="Ver instrucciones"
               >
                 ❓ Ayuda
               </button>

@@ -4,13 +4,24 @@ import API_URL from "../../config/api.js";
 import "./Achievements.css";
 
 function Achievements({ userDetails }) {
+  if (!userDetails) {
+    return (
+      <div className="achievements-container">
+        <div className="error-state">
+          <h2>❌ Error de autenticación</h2>
+          <p>No se pudieron cargar los detalles del usuario. Por favor, intenta recargar la página o cerrar sesión y volver a entrar.</p>
+        </div>
+      </div>
+    );
+  }
+
   const location = useLocation();
   const initialTab = location.state?.initialTab || "resumen";
-  
+
   const [historial, setHistorial] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [vistaActual, setVistaActual] = useState(initialTab); // resumen, historial, logros
+  const [vistaActual, setVistaActual] = useState(initialTab);
   const [highlightTab, setHighlightTab] = useState(false);
 
   useEffect(() => {
@@ -35,16 +46,15 @@ function Achievements({ userDetails }) {
   const cargarHistorial = async () => {
     setLoading(true);
     setError("");
-    
+
     try {
       const token = localStorage.getItem("token");
       const isComercio = userDetails?.tipo === 'comercio';
       
-      // Usar endpoint diferente para comercios
-      const endpoint = isComercio 
+      const endpoint = isComercio
         ? `${API_URL}/reciclajes/comercio/estadisticas`
         : `${API_URL}/reciclajes/historial`;
-        
+
       const response = await fetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -55,9 +65,7 @@ function Achievements({ userDetails }) {
 
       const data = await response.json();
       setHistorial(data);
-      console.log('📊 Historial cargado:', data);
     } catch (err) {
-      console.error("Error cargando historial:", err);
       setError("Error al cargar el historial: " + err.message);
     } finally {
       setLoading(false);
@@ -67,9 +75,12 @@ function Achievements({ userDetails }) {
   const formatearFecha = (fechaISO) => {
     if (!fechaISO) return 'Fecha no disponible';
 
+    if (typeof fechaISO === 'object') {
+      return 'Fecha no disponible';
+    }
+
     const fecha = new Date(fechaISO);
 
-    // Verificar si la fecha es válida
     if (isNaN(fecha.getTime())) {
       return 'Fecha inválida';
     }
@@ -95,7 +106,6 @@ function Achievements({ userDetails }) {
         month: 'long'
       });
     } catch (error) {
-      console.error('Error formateando mes:', error);
       return 'Error en formato de mes';
     }
   };
@@ -203,7 +213,7 @@ function Achievements({ userDetails }) {
             <div className="stat-card primary">
               <div className="stat-icon">{isComercio ? '🏪' : '🎯'}</div>
               <div className="stat-content">
-                <h3>{estadisticas.totalReciclajes || 0}</h3>
+                <h3>{Number(estadisticas.totalReciclajes) || 0}</h3>
                 <p>{isComercio ? 'Reciclajes Procesados' : 'Reciclajes Totales'}</p>
               </div>
             </div>
@@ -211,7 +221,7 @@ function Achievements({ userDetails }) {
             <div className="stat-card">
               <div className="stat-icon">⚖️</div>
               <div className="stat-content">
-                <h3>{(estadisticas.pesoTotal || 0).toFixed(1)}kg</h3>
+                <h3>{(Number(estadisticas.pesoTotal) || 0).toFixed(1)}kg</h3>
                 <p>{isComercio ? 'Peso Total Recibido' : 'Peso Total Reciclado'}</p>
               </div>
             </div>
@@ -219,7 +229,7 @@ function Achievements({ userDetails }) {
             <div className="stat-card">
               <div className="stat-icon">{isComercio ? '🎁' : '💎'}</div>
               <div className="stat-content">
-                <h3>{isComercio ? (estadisticas.puntosOtorgados || 0) : (estadisticas.puntosTotal || 0)}</h3>
+                <h3>{isComercio ? (Number(estadisticas.puntosOtorgados) || 0) : (Number(estadisticas.puntosTotal) || 0)}</h3>
                 <p>{isComercio ? 'Puntos Otorgados' : 'Puntos Ganados'}</p>
               </div>
             </div>
@@ -227,7 +237,7 @@ function Achievements({ userDetails }) {
             <div className="stat-card">
               <div className="stat-icon">{isComercio ? '👥' : '🗺️'}</div>
               <div className="stat-content">
-                <h3>{isComercio ? (estadisticas.usuariosAtendidos || 0) : (estadisticas.puntosVisitados || 0)}</h3>
+                <h3>{isComercio ? (Number(estadisticas.usuariosAtendidos) || 0) : (Number(estadisticas.puntosVisitados) || 0)}</h3>
                 <p>{isComercio ? 'Usuarios Atendidos' : 'Puntos Visitados'}</p>
               </div>
             </div>
@@ -237,16 +247,23 @@ function Achievements({ userDetails }) {
           <div className="section-card">
             <h2>🎨 {isComercio ? 'Materiales Recibidos' : 'Materiales Reciclados'}</h2>
             <div className="materiales-grid">
-              {Object.entries(isComercio ? (estadisticas.tiposRecibidos || {}) : (estadisticas.tiposReciclados || {})).map(([tipo, cantidad]) => (
-                <div key={tipo} className="material-item">
-                  <span className="material-emoji">{obtenerEmojiTipo(tipo)}</span>
-                  <div className="material-info">
-                    <strong>{tipo}</strong>
-                    <span>{isComercio ? `${cantidad.toFixed(1)}kg` : `${cantidad} veces`}</span>
-                  </div>
-                </div>
-              ))}
-              {Object.keys(isComercio ? (estadisticas.tiposRecibidos || {}) : (estadisticas.tiposReciclados || {})).length === 0 && (
+              {(() => {
+                const materiales = isComercio ? (estadisticas?.tiposRecibidos || {}) : (estadisticas?.tiposReciclados || {});
+
+                if (typeof materiales === 'object' && !Array.isArray(materiales) && Object.keys(materiales).length > 0) {
+                  return Object.entries(materiales).map(([tipo, cantidad]) => (
+                    <div key={tipo} className="material-item">
+                      <span className="material-emoji">{obtenerEmojiTipo(tipo)}</span>
+                      <div className="material-info">
+                        <strong>{tipo}</strong>
+                        <span>{isComercio ? `${Number(cantidad).toFixed(1)}kg` : `${Number(cantidad)} veces`}</span>
+                      </div>
+                    </div>
+                  ));
+                }
+                return null;
+              })()}
+              {(!estadisticas || Object.keys(isComercio ? (estadisticas?.tiposRecibidos || {}) : (estadisticas?.tiposReciclados || {})).length === 0) && (
                 <p className="empty-text">{isComercio ? 'Aún no has recibido materiales' : 'Aún no has reciclado ningún material'}</p>
               )}
             </div>
@@ -260,21 +277,21 @@ function Achievements({ userDetails }) {
                 <div className="impact-item">
                   <div className="impact-icon">💨</div>
                   <div className="impact-info">
-                    <strong>{estadisticas.impactoAmbiental.co2Ahorrado}kg</strong>
+                    <strong>{Number(estadisticas.impactoAmbiental?.co2Ahorrado) || 0}kg</strong>
                     <span>CO2 Ahorrado</span>
                   </div>
                 </div>
                 <div className="impact-item">
                   <div className="impact-icon">⚡</div>
                   <div className="impact-info">
-                    <strong>{estadisticas.impactoAmbiental.energiaAhorrada}kWh</strong>
+                    <strong>{Number(estadisticas.impactoAmbiental?.energiaAhorrada) || 0}kWh</strong>
                     <span>Energía Ahorrada</span>
                   </div>
                 </div>
                 <div className="impact-item">
                   <div className="impact-icon">💧</div>
                   <div className="impact-info">
-                    <strong>{estadisticas.impactoAmbiental.aguaAhorrada}L</strong>
+                    <strong>{Number(estadisticas.impactoAmbiental?.aguaAhorrada) || 0}L</strong>
                     <span>Agua Ahorrada</span>
                   </div>
                 </div>
@@ -289,11 +306,11 @@ function Achievements({ userDetails }) {
               <div className="info-list">
                 <div className="info-item">
                   <span className="info-label">Primer reciclaje:</span>
-                  <span>{formatearFecha(estadisticas.primerReciclaje)}</span>
+                  <span>{estadisticas?.primerReciclaje ? formatearFecha(estadisticas.primerReciclaje) : 'No disponible'}</span>
                 </div>
                 <div className="info-item">
                   <span className="info-label">Último reciclaje:</span>
-                  <span>{formatearFecha(estadisticas.ultimoReciclaje)}</span>
+                  <span>{estadisticas?.ultimoReciclaje ? formatearFecha(estadisticas.ultimoReciclaje) : 'No disponible'}</span>
                 </div>
                 {estadisticas.mejorMes?.mes && (
                   <div className="info-item">
@@ -309,11 +326,11 @@ function Achievements({ userDetails }) {
               <div className="info-list">
                 <div className="info-item">
                   <span className="info-label">Racha actual:</span>
-                  <span>{estadisticas.rachaActual || 0} días</span>
+                  <span>{Number(estadisticas?.rachaActual) || 0} días</span>
                 </div>
                 <div className="info-item">
                   <span className="info-label">Mejor racha:</span>
-                  <span>{estadisticas.mejorRacha || 0} días</span>
+                  <span>{Number(estadisticas?.mejorRacha) || 0} días</span>
                 </div>
               </div>
             </div>

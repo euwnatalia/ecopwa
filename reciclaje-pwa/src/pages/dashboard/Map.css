@@ -42,6 +42,56 @@
   transform: translateY(-2px);
 }
 
+/* Help Tooltip */
+.help-tooltip {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  background: linear-gradient(135deg, #4CAF50, #66BB6A);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 25px;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+  z-index: 1000;
+  animation: slideIn 0.4s ease-out, fadeOut 0.5s ease-in 3.5s forwards;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 40px);
+}
+
+@media (max-width: 768px) {
+  .help-tooltip {
+    top: 60px;
+    right: 10px;
+    left: 10px;
+    text-align: center;
+    justify-content: center;
+    font-size: 13px;
+    padding: 10px 16px;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
 /* Intro explicativa */
 .map-intro {
   position: fixed;
@@ -179,11 +229,28 @@
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.3s ease;
+  position: relative;
+  font-weight: 500;
 }
 
 .btn-help:hover {
   background: #1976d2;
   transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.4);
+}
+
+.btn-help.pulse {
+  animation: pulse 2s ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  25%, 75% {
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(33, 150, 243, 0.6);
+  }
 }
 
 /* Controles del mapa */

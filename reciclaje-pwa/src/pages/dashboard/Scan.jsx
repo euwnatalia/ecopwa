@@ -68,11 +68,9 @@ export default function Scan() {
         };
         setUserLocation(location);
         setLoadingLocation(false);
-        console.log("Ubicación obtenida:", location);
-      },
+        },
       (error) => {
-        console.error("Error obteniendo ubicación:", error);
-        setLoadingLocation(false);
+          setLoadingLocation(false);
         setError("No se pudo obtener tu ubicación. Los puntos se mostrarán sin orden por distancia.");
       },
       {
@@ -122,10 +120,8 @@ export default function Scan() {
           }
         }
       } else {
-        console.error("Error cargando puntos:", response.statusText);
       }
     } catch (err) {
-      console.error("Error cargando puntos cercanos:", err);
       setError("Error al cargar puntos de reciclaje cercanos");
     } finally {
       setLoadingPuntos(false);
@@ -167,14 +163,12 @@ export default function Scan() {
 
       Quagga.init(config, (err) => {
         if (err) {
-          console.error("Error inicializando Quagga:", err);
-          setError("Error al inicializar el scanner: " + err.message);
+              setError("Error al inicializar el scanner: " + err.message);
           setIsScanning(false);
           setScannerReady(false);
           return;
         }
         
-        console.log("Quagga inicializado correctamente");
         Quagga.start();
         setIsScanning(true);
         setScannerReady(true);
@@ -195,7 +189,6 @@ export default function Scan() {
         }
         
         setUltimaDeteccion(now);
-        console.log("Código detectado (validando):", code);
         
         // Agregar al buffer de detecciones
         setCodigoBuffer(prev => {
@@ -222,7 +215,6 @@ export default function Scan() {
 
     // Función para confirmar código después de 3 detecciones
     const confirmarCodigo = (code) => {
-      console.log("✅ Código confirmado:", code);
       
       // Parar el scanner inmediatamente
       stopScanner();
@@ -251,9 +243,7 @@ export default function Scan() {
         Quagga.stop();
         Quagga.offDetected();
         Quagga.offProcessed();
-        console.log("Scanner detenido");
       } catch (err) {
-        console.log("Error deteniendo scanner:", err);
       }
     }
     setIsScanning(false);
@@ -277,11 +267,10 @@ export default function Scan() {
         
         if (response.ok) {
           const prod = await response.json();
-          console.log("Producto encontrado:", prod); // Para debug
-        setProducto(prod);
-          setNombreProd(prod.nombre || "");
-          setTipo(prod.tipo || "");
-          setPesoEstimado(prod.pesoEstimado ? prod.pesoEstimado.toString() : "");
+                  setProducto(prod);
+          setNombreProd(String(prod.nombre || ""));
+          setTipo(String(prod.tipo || ""));
+          setPesoEstimado(prod.pesoEstimado ? String(prod.pesoEstimado) : "");
         setError("");
         } else if (response.status === 404) {
           // Producto no encontrado
@@ -294,8 +283,7 @@ export default function Scan() {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
       } catch (err) {
-        console.error("Error buscando producto:", err);
-        setProducto(null);
+          setProducto(null);
         setNombreProd("");
         setTipo("");
         setPesoEstimado("");
@@ -338,7 +326,6 @@ export default function Scan() {
       setError("");
       alert("✅ Producto agregado correctamente. Ahora puedes guardar el reciclaje.");
     } catch (e) {
-      console.error("Error registrando producto:", e);
       alert("Error al registrar producto: " + e.message);
     }
   };
@@ -356,7 +343,7 @@ export default function Scan() {
     }
     
     // Verificar compatibilidad de materiales
-    const esCompatible = puntoSeleccionado.tipo.toLowerCase() === tipo.toLowerCase();
+    const esCompatible = String(puntoSeleccionado.tipo).toLowerCase() === String(tipo).toLowerCase();
     
     if (!esCompatible) {
       const confirmar = confirm(
@@ -422,7 +409,6 @@ export default function Scan() {
       // limpio todo
       limpiarFormulario();
     } catch (e) {
-      console.error("Error guardando reciclaje:", e);
       alert("Error al guardar reciclaje: " + e.message);
     }
   };
@@ -532,7 +518,6 @@ export default function Scan() {
         throw new Error("Error al crear punto");
       }
     } catch (err) {
-      console.error("Error creando punto:", err);
       alert("Error al crear punto de reciclaje: " + err.message);
     } finally {
       setCreandoPunto(false);
@@ -709,8 +694,8 @@ export default function Scan() {
 
         <label>
               Tipo de material:
-              <select 
-                value={tipo} 
+              <select
+                value={tipo || ''}
                 onChange={e => setTipo(e.target.value)}
                 disabled={producto !== null}
               >
@@ -746,29 +731,29 @@ export default function Scan() {
                     <select
                       value={puntoSeleccionado?.id || ""}
                       onChange={e => {
-                        const punto = puntosReciclaje.find(p => p.id === e.target.value);
+                        const punto = puntosReciclaje.find(p => String(p.id) === e.target.value);
                         setPuntoSeleccionado(punto);
                       }}
                     >
                       <option value="">– Selecciona un punto –</option>
                       {puntosReciclaje.map(punto => {
-                        const esCompatible = punto.tipo.toLowerCase() === tipo.toLowerCase();
+                        const esCompatible = String(punto.tipo).toLowerCase() === String(tipo).toLowerCase();
                         const distanciaTexto = punto.distancia ? ` (${formatDistancia(punto.distancia)})` : '';
                         const tipoIndicador = esCompatible ? '✅' : '⚠️';
-                        
+
                         return (
-                          <option key={punto.id} value={punto.id}>
-                            {tipoIndicador} {punto.nombre} - {punto.tipo}{distanciaTexto}
+                          <option key={String(punto.id)} value={String(punto.id)}>
+                            {tipoIndicador} {String(punto.nombre)} - {String(punto.tipo)}{distanciaTexto}
                           </option>
                         );
                       })}
                     </select>
                     
                     {/* Advertencia de compatibilidad */}
-                    {puntoSeleccionado && puntoSeleccionado.tipo.toLowerCase() !== tipo.toLowerCase() && (
+                    {puntoSeleccionado && String(puntoSeleccionado.tipo).toLowerCase() !== String(tipo).toLowerCase() && (
                       <div className="warning-compatibilidad">
-                        ⚠️ <strong>Advertencia:</strong> Este punto acepta <strong>{puntoSeleccionado.tipo}</strong>, 
-                        pero seleccionaste <strong>{tipo}</strong>. 
+                        ⚠️ <strong>Advertencia:</strong> Este punto acepta <strong>{String(puntoSeleccionado.tipo)}</strong>,
+                        pero seleccionaste <strong>{String(tipo)}</strong>.
                         Verifica que acepten tu material antes de ir.
                       </div>
                     )}
@@ -776,10 +761,10 @@ export default function Scan() {
                     {/* Info del punto seleccionado */}
                     {puntoSeleccionado && (
                       <div className="info-punto-seleccionado">
-                        <h4>📍 {puntoSeleccionado.nombre}</h4>
-                        <p><strong>Tipo:</strong> {puntoSeleccionado.tipo}</p>
+                        <h4>📍 {String(puntoSeleccionado.nombre)}</h4>
+                        <p><strong>Tipo:</strong> {String(puntoSeleccionado.tipo)}</p>
                         {puntoSeleccionado.direccion && (
-                          <p><strong>Dirección:</strong> {puntoSeleccionado.direccion}</p>
+                          <p><strong>Dirección:</strong> {String(puntoSeleccionado.direccion)}</p>
                         )}
                         {puntoSeleccionado.distancia && (
                           <p><strong>Distancia:</strong> {formatDistancia(puntoSeleccionado.distancia)}</p>
