@@ -11,7 +11,7 @@ import { MATERIALES, getMaterialByValue } from "../../constants/materiales.js";
 import "./Map.css";
 import "../../styles/map-popups-optimization.css";
 
-const API_KEY = "AIzaSyDogeXjIze7GDPF1IOOkgX3acOgBvPqPv0";
+const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const CONTAINER_STYLE = { width: "100%", height: "70vh", minHeight: "500px" };
 const DEFAULT_CENTER = { lat: -31.4173, lng: -64.1833 }; // Córdoba, Argentina
 

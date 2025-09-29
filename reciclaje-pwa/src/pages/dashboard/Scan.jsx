@@ -85,44 +85,43 @@ export default function Scan() {
     setLoadingPuntos(true);
     try {
       const params = new URLSearchParams();
-      
+
       if (userLocation) {
         params.append('lat', userLocation.lat);
         params.append('lng', userLocation.lng);
-        params.append('radio', '100'); // 100km de radio (aprox 1 hora)
+        params.append('radio', '100');
       }
 
       const response = await fetch(
-        `${API_URL}/puntos?${params}`, 
+        `${API_URL}/puntos?${params}`,
         {
-          headers: { 
-            Authorization: `Bearer ${localStorage.getItem("token")}` 
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`
           }
         }
       );
-      
+
       if (response.ok) {
         const puntos = await response.json();
         setPuntosReciclaje(puntos);
-        
-        // Auto-seleccionar el punto más cercano si hay ubicación
+
         if (puntos.length > 0 && userLocation) {
-          // Encontrar el punto más cercano que acepta el tipo de material seleccionado
-          const puntoCompatible = puntos.find(punto => 
-            punto.tipo.toLowerCase() === tipo.toLowerCase()
+          const puntoCompatible = puntos.find(punto =>
+            punto.tipo && tipo && punto.tipo.toLowerCase() === tipo.toLowerCase()
           );
-          
+
           if (puntoCompatible) {
             setPuntoSeleccionado(puntoCompatible);
           } else {
-            // Si no hay punto compatible, seleccionar el más cercano de cualquier tipo
             setPuntoSeleccionado(puntos[0]);
           }
         }
       } else {
+        const errorText = await response.text();
+        setError(`Error ${response.status}: ${errorText}`);
       }
     } catch (err) {
-      setError("Error al cargar puntos de reciclaje cercanos");
+      setError("Error al cargar puntos de reciclaje cercanos: " + err.message);
     } finally {
       setLoadingPuntos(false);
     }
@@ -341,10 +340,9 @@ export default function Scan() {
       alert("Debes seleccionar un punto de reciclaje.");
       return;
     }
-    
-    // Verificar compatibilidad de materiales
-    const esCompatible = String(puntoSeleccionado.tipo).toLowerCase() === String(tipo).toLowerCase();
-    
+
+    const esCompatible = puntoSeleccionado.tipo && tipo && puntoSeleccionado.tipo.toLowerCase() === tipo.toLowerCase();
+
     if (!esCompatible) {
       const confirmar = confirm(
         `⚠️ ADVERTENCIA:\n\n` +
@@ -497,13 +495,19 @@ export default function Scan() {
 
     setCreandoPunto(true);
     try {
+      const payload = {
+        ...nuevoPunto,
+        tipos: [nuevoPunto.tipo]
+      };
+      delete payload.tipo;
+
       const response = await fetch(`${API_URL}/puntos`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`
         },
-        body: JSON.stringify(nuevoPunto)
+        body: JSON.stringify(payload)
       });
 
       if (response.ok) {
@@ -737,23 +741,23 @@ export default function Scan() {
                     >
                       <option value="">– Selecciona un punto –</option>
                       {puntosReciclaje.map(punto => {
-                        const esCompatible = String(punto.tipo).toLowerCase() === String(tipo).toLowerCase();
+                        const puntoTipo = punto.tipo || 'Sin especificar';
+                        const esCompatible = punto.tipo && tipo && punto.tipo.toLowerCase() === tipo.toLowerCase();
                         const distanciaTexto = punto.distancia ? ` (${formatDistancia(punto.distancia)})` : '';
                         const tipoIndicador = esCompatible ? '✅' : '⚠️';
 
                         return (
                           <option key={String(punto.id)} value={String(punto.id)}>
-                            {tipoIndicador} {String(punto.nombre)} - {String(punto.tipo)}{distanciaTexto}
+                            {tipoIndicador} {String(punto.nombre)} - {puntoTipo}{distanciaTexto}
                           </option>
                         );
                       })}
                     </select>
-                    
-                    {/* Advertencia de compatibilidad */}
-                    {puntoSeleccionado && String(puntoSeleccionado.tipo).toLowerCase() !== String(tipo).toLowerCase() && (
+
+                    {puntoSeleccionado && puntoSeleccionado.tipo && tipo && puntoSeleccionado.tipo.toLowerCase() !== tipo.toLowerCase() && (
                       <div className="warning-compatibilidad">
-                        ⚠️ <strong>Advertencia:</strong> Este punto acepta <strong>{String(puntoSeleccionado.tipo)}</strong>,
-                        pero seleccionaste <strong>{String(tipo)}</strong>.
+                        ⚠️ <strong>Advertencia:</strong> Este punto acepta <strong>{puntoSeleccionado.tipo}</strong>,
+                        pero seleccionaste <strong>{tipo}</strong>.
                         Verifica que acepten tu material antes de ir.
                       </div>
                     )}

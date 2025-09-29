@@ -3,18 +3,19 @@
   height: 100vh !important;
   background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
   color: white;
-  padding: 1.5rem;
+  padding: 1.5rem 0 1.5rem 1.5rem;
   box-shadow: 4px 0 24px rgba(56,142,60,0.15);
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
-  z-index: 100 !important; /* Reducido para evitar conflictos con modales */
+  z-index: 100 !important;
   transition: transform 0.3s ease;
   display: flex;
   flex-direction: column;
   max-width: 250px !important;
   min-width: 250px !important;
   font-family: 'Nunito', 'Open Sans', sans-serif;
+  overflow: hidden;
 }
 
 .sidebar.mobile-hidden {
@@ -23,6 +24,7 @@
 
 .sidebar h2 {
   margin-bottom: 1rem;
+  margin-right: 1.5rem;
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: 1px;
@@ -38,6 +40,7 @@
   font-size: 0.85rem;
   font-weight: 600;
   margin-bottom: 2rem;
+  margin-right: 1.5rem;
   border: 1px solid rgba(255, 255, 255, 0.3);
   display: flex;
   align-items: center;
@@ -49,6 +52,11 @@
   font-size: 1.3em;
 }
 
+.sidebar nav {
+  padding-right: 1.5rem;
+  overflow-x: hidden;
+}
+
 .sidebar ul {
   list-style: none;
   padding: 0;
@@ -56,7 +64,7 @@
 }
 
 .sidebar li {
-  margin: 1.1rem 0;
+  margin: 0.6rem 0;
 }
 
 .sidebar a {
@@ -68,9 +76,11 @@
   gap: 0.9rem;
   font-size: 1.08rem;
   padding: 0.85rem 1rem;
+  margin: 0 0.2rem;
   border-radius: 10px;
   background: transparent;
-  transition: background 0.25s, color 0.25s, transform 0.18s;
+  transition: all 0.25s ease;
+  position: relative;
 }
 
 .sidebar a .sidebar-icon {
@@ -81,22 +91,28 @@
   height: 26px;
   background: rgba(255,255,255,0.08);
   border-radius: 7px;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
 }
 
-.sidebar a:hover, .sidebar a.active {
-  background: rgba(255,255,255,0.13);
+.sidebar a:hover {
+  background: rgba(255,255,255,0.08);
   color: #A5D6A7;
-  transform: translateX(4px) scale(1.03);
+}
+
+.sidebar a.active {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  font-weight: 600;
 }
 
 .sidebar a:hover .sidebar-icon, .sidebar a.active .sidebar-icon {
-  background: #A5D6A7;
+  background: rgba(255,255,255,0.2);
+  transform: scale(1.1);
 }
 
 .sidebar-bottom {
   margin-top: auto;
-  padding-top: 1rem;
+  padding: 1rem 1.5rem 0 0;
   border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -208,7 +224,7 @@
 /* Botón de instalación PWA */
 .pwa-install {
   margin-top: auto;
-  padding-top: 2rem;
+  padding: 2rem 1.5rem 0 0;
   border-top: 1px solid rgba(255,255,255,0.2);
 }
 

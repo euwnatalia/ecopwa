@@ -21,10 +21,19 @@ async function getPuntos(req, res) {
     console.log('📍 getPuntos called with params:', { tipo, lat, lng, radio, incluirInactivos });
     
     let query = db.collection('puntos');
-    
+
     const snap = await query.get();
-    let lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
+    let lista = snap.docs.map(d => {
+      const data = d.data();
+      const normalized = { id: d.id, ...data };
+
+      if (Array.isArray(data.tipos) && data.tipos.length > 0 && !data.tipo) {
+        normalized.tipo = data.tipos[0];
+      }
+
+      return normalized;
+    });
+
     console.log(`📊 Found ${lista.length} puntos before filtering`);
     
     // Filtrar por tipo (soporta tanto array como string para compatibilidad)
