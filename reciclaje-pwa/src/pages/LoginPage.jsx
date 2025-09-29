@@ -5,7 +5,7 @@ import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-map
 import API_URL from "../config/api.js";
 import "./LoginPage.css";
 
-const API_KEY = "AIzaSyDogeXjIze7GDPF1IOOkgX3acOgBvPqPv0";
+const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const CONTAINER_STYLE = { width: "100%", height: "400px" };
 const DEFAULT_CENTER = { lat: -31.4173, lng: -64.1833 };
 

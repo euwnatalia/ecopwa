@@ -14,9 +14,9 @@ module.exports = {
     },
     {
       name: "reciclaje-pwa",
-      script: "npx",
-      args: "serve -s dist -l 5174",
-      cwd: "./reciclaje-pwa",
+      script: "/home/ubuntu/ecopwa/reciclaje-pwa/node_modules/.bin/serve",
+      args: "-s dist -l 5174",
+      cwd: "/home/ubuntu/ecopwa/reciclaje-pwa",
       autorestart: true,
       watch: false,
       env: {
