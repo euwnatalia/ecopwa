@@ -19,8 +19,8 @@ function LoginPage({ setUser }) {
   const [userData, setUserData] = useState(null);
   const [filtroTipo, setFiltroTipo] = useState("");
   const [selectedPunto, setSelectedPunto] = useState(null);
-  const [showGameInfo, setShowGameInfo] = useState(false);
   const [selectedUserType, setSelectedUserType] = useState(null);
+  const [showAppInfo, setShowAppInfo] = useState(false);
   
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: API_KEY
@@ -69,10 +69,10 @@ const handleSelectUserType = async (tipo) => {
           uid: user.uid,
           nombre: user.displayName,
           email: user.email,
-          token: token
+          token: token,
+          tipoPreseleccionado: tipo // Agregar el tipo directamente en userData
         });
         setShowRegistration(true);
-        setSelectedUserType(tipo); // Mantener la selección para el modal
         setLoading(false);
         return;
       } else {
@@ -252,13 +252,15 @@ const handleLogin = async () => {
   
 if (showRegistration) {
     return (
-      <RegistrationModal 
+      <RegistrationModal
         userData={userData}
         onRegister={handleUserRegistration}
         onBack={() => setShowRegistration(false)}
         loading={loading}
         error={error}
         isLoaded={isLoaded}
+        preselectedType={userData?.tipoPreseleccionado}
+        apiKey={API_KEY}
       />
     );
   }
@@ -271,7 +273,6 @@ if (showRegistration) {
             Bienvenido a <span>reciclAR ♻️</span>
           </h1>
           <p className="login-subtitle">¿Cómo querés participar en el reciclaje?</p>
-          <p className="login-hint">Elegí una opción para continuar</p>
 
           <div className="user-selection-cards">
             <div
@@ -299,50 +300,72 @@ if (showRegistration) {
             </div>
           </div>
 
-          <div className="gamification-section">
-            <button className="gamification-link" onClick={() => setShowGameInfo(true)}>
-              <span className="gamification-icon">🏆</span>
-              <span className="gamification-text">
-                <strong>Sistema de Gamificación</strong>
-                <small>Descubrí cómo funciona nuestro sistema de puntos y recompensas</small>
+          <div className="app-info-section">
+            <button className="app-info-link" onClick={() => setShowAppInfo(true)}>
+              <span className="info-icon">ℹ️</span>
+              <span className="info-text">
+                <strong>¿Qué podés hacer en la app?</strong>
+                <small>Descubrí todas las funcionalidades</small>
               </span>
-              <span className="gamification-arrow">→</span>
+              <span className="info-arrow">→</span>
             </button>
           </div>
-
 
           {error && <div className="login-error">{error}</div>}
 
           <p className="login-slogan">Pequeñas acciones, grandes cambios 🌍</p>
 
-          {showGameInfo && (
-            <div className="game-info-modal" onClick={() => setShowGameInfo(false)}>
-              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                <button className="modal-close" onClick={() => setShowGameInfo(false)}>×</button>
-                <h3>🏆 ¿Cómo funciona la Gamificación?</h3>
-                <div className="game-features">
-                  <div className="feature">
+          {showAppInfo && (
+            <div className="app-info-modal" onClick={() => setShowAppInfo(false)}>
+              <div className="app-info-content" onClick={(e) => e.stopPropagation()}>
+                <button className="modal-close" onClick={() => setShowAppInfo(false)}>×</button>
+
+                <div className="modal-header">
+                  <h3>🌱 ¿Qué podés hacer en reciclAR?</h3>
+                  <p className="modal-subtitle">Tu aplicación para reciclar de forma inteligente</p>
+                </div>
+
+                <div className="app-features">
+                  <div className="app-feature-card">
+                    <div className="feature-icon">🗺️</div>
+                    <h4>Mapa Colaborativo</h4>
+                    <p>Encontrá puntos de reciclaje cercanos, registrá nuevos lugares y ayudá a la comunidad validando información.</p>
+                  </div>
+
+                  <div className="app-feature-card">
+                    <div className="feature-icon">📸</div>
+                    <h4>Escaneo de Productos</h4>
+                    <p>Escaneá códigos de barras para saber si un producto es reciclable y cómo hacerlo correctamente.</p>
+                  </div>
+
+                  <div className="app-feature-card">
                     <div className="feature-icon">📊</div>
-                    <div>
-                      <strong>Puntos por Reciclaje</strong>
-                      <p>Ganá puntos según la cantidad y distancia de tus reciclajes</p>
-                    </div>
+                    <h4>Seguimiento de Impacto</h4>
+                    <p>Registrá tus reciclajes, acumulá puntos y mirá tu impacto ambiental en tiempo real.</p>
                   </div>
-                  <div className="feature">
-                    <div className="feature-icon">🏅</div>
-                    <div>
-                      <strong>Logros y Niveles</strong>
-                      <p>Desbloqueá badges especiales y subí de nivel</p>
-                    </div>
+
+                  <div className="app-feature-card">
+                    <div className="feature-icon">🏆</div>
+                    <h4>Logros y Ranking</h4>
+                    <p>Desbloqueá badges, subí de nivel y competí con otros usuarios en el ranking comunitario.</p>
                   </div>
-                  <div className="feature">
-                    <div className="feature-icon">📈</div>
-                    <div>
-                      <strong>Ranking</strong>
-                      <p>Competí con otros usuarios y mirá tu impacto ambiental</p>
-                    </div>
+
+                  <div className="app-feature-card">
+                    <div className="feature-icon">👤</div>
+                    <h4>Perfil Personalizado</h4>
+                    <p>Gestioná tu perfil, configurá tus preferencias y accedé a tu historial de reciclajes.</p>
+                  </div>
+
+                  <div className="app-feature-card">
+                    <div className="feature-icon">🏪</div>
+                    <h4>Comercios Verificados</h4>
+                    <p>Si sos un comercio, registrate como punto verde oficial y aparecé en el mapa para ayudar a la comunidad.</p>
                   </div>
                 </div>
+
+                <button className="modal-action-btn" onClick={() => setShowAppInfo(false)}>
+                  ¡Entendido!
+                </button>
               </div>
             </div>
           )}
@@ -436,9 +459,10 @@ if (showRegistration) {
   );
 }
 
-function RegistrationModal({ userData, onRegister, onBack, loading, error, isLoaded }) {
-  const [step, setStep] = useState(1);
-  const [selectedType, setSelectedType] = useState(null);
+function RegistrationModal({ userData, onRegister, onBack, loading, error, isLoaded, preselectedType, apiKey }) {
+  // Si viene con tipo preseleccionado (comercio), ir directo al paso 2
+  const [step, setStep] = useState(preselectedType === 'comercio' ? 2 : 1);
+  const [selectedType, setSelectedType] = useState(preselectedType || null);
   const [formData, setFormData] = useState({
     tiposReciclaje: [],
     ubicacion: null,
@@ -446,7 +470,6 @@ function RegistrationModal({ userData, onRegister, onBack, loading, error, isLoa
     telefono: '',
     horarios: ''
   });
-
   const tiposReciclaje = [
     { value: "Plástico", label: "🥤 Plástico", color: "#2196F3" },
     { value: "Vidrio", label: "🫙 Vidrio", color: "#4CAF50" },
@@ -455,15 +478,62 @@ function RegistrationModal({ userData, onRegister, onBack, loading, error, isLoa
     { value: "Metal", label: "🥫 Metal", color: "#607D8B" }
   ];
 
+  const handleDireccionBlur = async () => {
+    if (formData.direccion && !formData.ubicacion && isLoaded) {
+      // Geocodificar la dirección cuando el usuario termine de escribir
+      try {
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ address: formData.direccion }, (results, status) => {
+          if (status === 'OK' && results[0]) {
+            const location = results[0].geometry.location;
+            setFormData({
+              ...formData,
+              ubicacion: {
+                lat: location.lat(),
+                lng: location.lng()
+              },
+              direccion: results[0].formatted_address
+            });
+          } else {
+            console.error("Error geocodificando:", status);
+            window.showToast && window.showToast('No se pudo encontrar la dirección', 'error');
+          }
+        });
+      } catch (error) {
+        console.error("Error geocodificando dirección:", error);
+      }
+    }
+  };
+
   const handleMapClick = (e) => {
-    if (selectedType === 'comercio') {
-      setFormData({
-        ...formData,
-        ubicacion: {
-          lat: e.latLng.lat(),
-          lng: e.latLng.lng()
-        }
-      });
+    if (selectedType === 'comercio' && isLoaded) {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+
+      // Geocodificación inversa para obtener la dirección
+      try {
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+          let direccion = formData.direccion;
+
+          if (status === 'OK' && results[0]) {
+            direccion = results[0].formatted_address;
+          }
+
+          setFormData({
+            ...formData,
+            ubicacion: { lat, lng },
+            direccion: direccion
+          });
+        });
+      } catch (error) {
+        console.error("Error obteniendo dirección:", error);
+        // Si hay error, solo actualizar la ubicación sin dirección
+        setFormData({
+          ...formData,
+          ubicacion: { lat, lng }
+        });
+      }
     }
   };
 
@@ -567,12 +637,28 @@ function RegistrationModal({ userData, onRegister, onBack, loading, error, isLoa
 
             <div className="form-group">
               <label>Información adicional</label>
-              <input
-                type="text"
-                placeholder="Dirección completa"
-                value={formData.direccion}
-                onChange={(e) => setFormData({...formData, direccion: e.target.value})}
-              />
+              <div className="direccion-search-group">
+                <input
+                  type="text"
+                  placeholder="Dirección completa"
+                  value={formData.direccion}
+                  onChange={(e) => setFormData({...formData, direccion: e.target.value})}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleDireccionBlur();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="search-address-btn"
+                  onClick={handleDireccionBlur}
+                  title="Buscar dirección"
+                >
+                  🔍
+                </button>
+              </div>
               <input
                 type="text"
                 placeholder="Teléfono (opcional)"

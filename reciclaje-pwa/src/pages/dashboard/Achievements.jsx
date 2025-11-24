@@ -1,9 +1,22 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useOutletContext } from "react-router-dom";
 import API_URL from "../../config/api.js";
 import "./Achievements.css";
 
-function Achievements({ userDetails }) {
+function Achievements({ userDetails: propsUserDetails }) {
+  const context = useOutletContext();
+  const userDetails = propsUserDetails || context?.userDetails;
+  const onLogout = context?.onLogout;
+
+  // Función para manejar errores 401 automáticamente
+  const handleUnauthorized = () => {
+    if (onLogout) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      onLogout();
+    }
+  };
+
   if (!userDetails) {
     return (
       <div className="achievements-container">
@@ -58,6 +71,11 @@ function Achievements({ userDetails }) {
       const response = await fetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      if (response.status === 401) {
+        handleUnauthorized();
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(`Error ${response.status}: ${response.statusText}`);

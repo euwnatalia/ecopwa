@@ -76,28 +76,41 @@ async function getProductos(req, res) {
 function determinarTipoMaterial(product) {
   const packaging = (product.packaging || '').toLowerCase();
   const packagingTags = product.packaging_tags || [];
+  const categories = (product.categories || '').toLowerCase();
 
   // Buscar palabras clave en el packaging
-  if (packaging.includes('plastic') || packaging.includes('plástico') ||
-      packagingTags.some(tag => tag.includes('plastic'))) {
-    return 'Plástico';
-  }
-  if (packaging.includes('glass') || packaging.includes('vidrio') ||
-      packagingTags.some(tag => tag.includes('glass'))) {
-    return 'Vidrio';
-  }
-  if (packaging.includes('cardboard') || packaging.includes('cartón') ||
-      packagingTags.some(tag => tag.includes('cardboard'))) {
-    return 'Cartón';
+  // Orden de prioridad: buscar todos los materiales primero
+  const materiales = [];
+
+  if (packaging.includes('cardboard') || packaging.includes('cartón') || packaging.includes('carton') ||
+      packagingTags.some(tag => tag.includes('cardboard') || tag.includes('carton')) ||
+      categories.includes('cardboard') || categories.includes('carton')) {
+    materiales.push('Cartón');
   }
   if (packaging.includes('paper') || packaging.includes('papel') ||
       packagingTags.some(tag => tag.includes('paper'))) {
-    return 'Papel';
+    materiales.push('Papel');
   }
-  if (packaging.includes('metal') || packaging.includes('aluminum') ||
-      packaging.includes('aluminio') || packagingTags.some(tag => tag.includes('metal'))) {
-    return 'Metal';
+  if (packaging.includes('glass') || packaging.includes('vidrio') ||
+      packagingTags.some(tag => tag.includes('glass'))) {
+    materiales.push('Vidrio');
   }
+  if (packaging.includes('metal') || packaging.includes('aluminum') || packaging.includes('aluminio') ||
+      packaging.includes('can') || packaging.includes('lata') ||
+      packagingTags.some(tag => tag.includes('metal') || tag.includes('aluminum') || tag.includes('can'))) {
+    materiales.push('Metal');
+  }
+  if (packaging.includes('plastic') || packaging.includes('plástico') ||
+      packagingTags.some(tag => tag.includes('plastic'))) {
+    materiales.push('Plástico');
+  }
+
+  // Priorizar materiales más reciclables (Cartón/Papel > Vidrio > Metal > Plástico)
+  if (materiales.includes('Cartón')) return 'Cartón';
+  if (materiales.includes('Papel')) return 'Papel';
+  if (materiales.includes('Vidrio')) return 'Vidrio';
+  if (materiales.includes('Metal')) return 'Metal';
+  if (materiales.includes('Plástico')) return 'Plástico';
 
   // Si no se puede determinar, usar Plástico por defecto (más común)
   return 'Plástico';

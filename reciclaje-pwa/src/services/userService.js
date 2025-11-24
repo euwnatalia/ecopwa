@@ -30,5 +30,23 @@ export const userService = {
     } catch (error) {
       throw error;
     }
+  },
+
+  async getRecentActivity() {
+    try {
+      const response = await authFetch(`${API_URL}/reciclajes/historial`);
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return {
+        reciclajes: data.reciclajes || [],
+        logros: data.logros || []
+      };
+    } catch (error) {
+      throw error;
+    }
   }
 }; 

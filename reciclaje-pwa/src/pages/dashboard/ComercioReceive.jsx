@@ -1,20 +1,119 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useOutletContext } from "react-router-dom";
+import Quagga from "@ericblade/quagga2";
 import API_URL from "../../config/api.js";
 import "./ComercioReceive.css";
 
 function ComercioReceive() {
-  const { userDetails } = useOutletContext();
+  const { userDetails, onLogout } = useOutletContext();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [reciclajes, setReciclajes] = useState([]);
   const [formData, setFormData] = useState({
     codigoUsuario: "",
+    codigoProducto: "",
     tipo: "",
     cantidad: "",
     puntos: ""
   });
+
+  // Estados para el scanner
+  const [modo, setModo] = useState("manual"); // "scanner" o "manual"
+  const [isScanning, setIsScanning] = useState(false);
+  const [scannerReady, setScannerReady] = useState(false);
+  const [codigoConfirmado, setCodigoConfirmado] = useState(false);
+  const [codigoBuffer, setCodigoBuffer] = useState([]);
+  const [ultimaDeteccion, setUltimaDeteccion] = useState(null);
+  const [producto, setProducto] = useState(null);
+
+  const scannerRef = useRef(null);
+  const detectionTimeoutRef = useRef(null);
+
+  // Función para manejar errores 401 automáticamente
+  const handleUnauthorized = () => {
+    if (onLogout) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      onLogout();
+    }
+  };
+
+  // Scanner setup
+  useEffect(() => {
+    if (modo !== "scanner") {
+      stopScanner();
+      return;
+    }
+    const startScanner = () => {
+      const config = {
+        inputStream: { name: "Live", type: "LiveStream", target: scannerRef.current, constraints: { width: { ideal: 1280, min: 640 }, height: { ideal: 720, min: 480 }, facingMode: "environment" } },
+        decoder: { readers: ["ean_reader", "ean_8_reader", "code_128_reader", "upc_reader", "upc_e_reader"] },
+        locate: true,
+        frequency: 25,
+        debug: false
+      };
+      Quagga.init(config, (err) => {
+        if (err) { setError("Error al inicializar el scanner"); setIsScanning(false); setScannerReady(false); return; }
+        Quagga.start(); setIsScanning(true); setScannerReady(true); setError("");
+      });
+      Quagga.onDetected((result) => {
+        const code = result.codeResult.code;
+        const now = Date.now();
+        if (codigoConfirmado || (ultimaDeteccion && now - ultimaDeteccion < 100)) return;
+        setUltimaDeteccion(now);
+        setCodigoBuffer(prev => {
+          const filteredBuffer = prev.filter(item => now - item.timestamp < 1500);
+          const sameCodeDetections = filteredBuffer.filter(item => item.code === code);
+          if (sameCodeDetections.length >= 2) {
+            setCodigoConfirmado(true);
+            setTimeout(() => { stopScanner(); setFormData(prev => ({ ...prev, codigoProducto: code })); setCodigoBuffer([]); buscarProducto(code); }, 100);
+            return [];
+          }
+          return [...filteredBuffer, { code, timestamp: now }].slice(-3);
+        });
+      });
+    };
+    const timer = setTimeout(startScanner, 200);
+    return () => { clearTimeout(timer); stopScanner(); };
+  }, [modo, codigoConfirmado]);
+
+  const stopScanner = () => {
+    if (Quagga && typeof Quagga.stop === 'function') {
+      try { Quagga.stop(); Quagga.offDetected(); Quagga.offProcessed(); } catch (err) {}
+    }
+    setIsScanning(false); setScannerReady(false);
+  };
+
+  const reiniciarScanner = () => {
+    setCodigoConfirmado(false); setCodigoBuffer([]); setUltimaDeteccion(null);
+    setFormData(prev => ({ ...prev, codigoProducto: "", tipo: "", cantidad: "" }));
+    setProducto(null); setError(""); setModo("scanner");
+  };
+
+  const cambiarModo = (nuevoModo) => {
+    if (nuevoModo === "scanner" && codigoConfirmado) { reiniciarScanner(); return; }
+    setModo(nuevoModo);
+    setFormData({ codigoUsuario: formData.codigoUsuario, codigoProducto: "", tipo: "", cantidad: "", puntos: "" });
+    setProducto(null); setError(""); setSuccess("");
+  };
+
+  const buscarProducto = async (codigo) => {
+    try {
+      const response = await fetch(`${API_URL}/productos?codigo=${encodeURIComponent(codigo)}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      if (response.status === 401) { handleUnauthorized(); return; }
+      if (response.ok) {
+        const prod = await response.json();
+        setProducto(prod);
+        setFormData(prev => ({ ...prev, codigoProducto: codigo, tipo: prod.tipo || "", cantidad: prod.pesoEstimado ? String(prod.pesoEstimado) : "" }));
+        setError("");
+      } else if (response.status === 404) {
+        setProducto(null); setError("Producto no encontrado");
+      }
+    } catch (err) { setProducto(null); setError("Error al buscar producto"); }
+  };
 
   const tiposReciclaje = [
     { value: "Plástico", label: "🥤 Plástico", puntosPorKg: 10 },
@@ -45,6 +144,11 @@ function ComercioReceive() {
       const response = await fetch(`${API_URL}/reciclajes/comercio`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      if (response.status === 401) {
+        handleUnauthorized();
+        return;
+      }
 
       if (response.ok) {
         const data = await response.json();
@@ -104,6 +208,11 @@ function ComercioReceive() {
         })
       });
 
+      if (response.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+
       const data = await response.json();
 
       if (!response.ok) {
@@ -115,10 +224,13 @@ function ComercioReceive() {
       // Limpiar formulario
       setFormData({
         codigoUsuario: "",
+        codigoProducto: "",
         tipo: "",
         cantidad: "",
         puntos: ""
       });
+      setProducto(null);
+      setCodigoConfirmado(false);
 
       // Recargar lista
       cargarReciclajes();
@@ -172,9 +284,77 @@ function ComercioReceive() {
       <div className="receive-form-section">
         <div className="form-card">
           <h2>📝 Nuevo Reciclaje</h2>
-          
+
           {error && <div className="error-message">{error}</div>}
           {success && <div className="success-message">{success}</div>}
+
+          {/* Mode Toggle */}
+          <div className="mode-toggle-container">
+            <button
+              type="button"
+              className={`mode-toggle-btn ${modo === "manual" ? "active" : ""}`}
+              onClick={() => cambiarModo("manual")}
+              disabled={loading}
+            >
+              ⌨️ Manual
+            </button>
+            <button
+              type="button"
+              className={`mode-toggle-btn ${modo === "scanner" ? "active" : ""}`}
+              onClick={() => cambiarModo("scanner")}
+              disabled={loading}
+            >
+              📷 Escanear
+            </button>
+          </div>
+
+          {/* Scanner Section */}
+          {modo === "scanner" && (
+            <div className="scanner-section">
+              {!codigoConfirmado ? (
+                <div className="scanner-container">
+                  <div className="scanner-viewport" ref={scannerRef}></div>
+                  {isScanning && (
+                    <div className="scanner-overlay">
+                      <div className="scanner-line"></div>
+                      <p className="scanner-instruction">Apunta al código de barras del producto</p>
+                    </div>
+                  )}
+                  {!scannerReady && (
+                    <div className="scanner-loading">
+                      <div className="spinner"></div>
+                      <p>Iniciando cámara...</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="code-confirmed">
+                  <div className="confirmed-badge">
+                    <span className="check-icon">✓</span>
+                    <div className="confirmed-text">
+                      <h4>Código escaneado</h4>
+                      <p className="codigo-value">{formData.codigoProducto}</p>
+                    </div>
+                  </div>
+                  {producto && (
+                    <div className="producto-info">
+                      <h4>Producto encontrado:</h4>
+                      <p><strong>{producto.nombre}</strong></p>
+                      <p>Tipo: {producto.tipo}</p>
+                      {producto.pesoEstimado && <p>Peso estimado: {producto.pesoEstimado}kg</p>}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={reiniciarScanner}
+                  >
+                    📷 Escanear otro código
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="receive-form">
             <div className="form-row">
@@ -243,8 +423,8 @@ function ComercioReceive() {
               </div>
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="submit-btn"
               disabled={loading || !formData.codigoUsuario || !formData.tipo || !formData.cantidad}
             >

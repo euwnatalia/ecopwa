@@ -1,10 +1,12 @@
 // src/pages/dashboard/Scan.jsx
 import { useState, useEffect, useRef } from "react";
+import { useOutletContext } from "react-router-dom";
 import Quagga from "@ericblade/quagga2";
 import API_URL from "../../config/api.js";
 import "./Scan.css";
 
 export default function Scan() {
+  const { onLogout } = useOutletContext();
   const [modo, setModo] = useState("codigo");             // "codigo" o "manual"
   const [codigo, setCodigo] = useState("");
   const [nombreProd, setNombreProd] = useState("");
@@ -33,13 +35,34 @@ export default function Scan() {
     nombre: "",
     direccion: "",
     tipo: "",
+    horarios: "",
+    observaciones: "",
     lat: null,
     lng: null
   });
   const [creandoPunto, setCreandoPunto] = useState(false);
 
+  // Estado para modal de éxito
+  const [mostrarModalExito, setMostrarModalExito] = useState(false);
+  const [datosExito, setDatosExito] = useState({
+    puntos: 0,
+    distancia: 0,
+    advertencia: false
+  });
+
+  // Estado para modal de producto agregado
+  const [mostrarModalProducto, setMostrarModalProducto] = useState(false);
+  const [productoAgregado, setProductoAgregado] = useState(null);
+
   const scannerRef = useRef(null);
   const detectionTimeoutRef = useRef(null);
+
+  // Función para manejar errores 401 automáticamente
+  const handleUnauthorized = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    onLogout();
+  };
 
   // Obtener geolocalización al cargar el componente
   useEffect(() => {
@@ -117,8 +140,12 @@ export default function Scan() {
           }
         }
       } else {
-        const errorText = await response.text();
-        setError(`Error ${response.status}: ${errorText}`);
+        if (response.status === 401) {
+          handleUnauthorized();
+        } else {
+          const errorText = await response.text();
+          setError(`Error ${response.status}: ${errorText}`);
+        }
       }
     } catch (err) {
       setError("Error al cargar puntos de reciclaje cercanos: " + err.message);
@@ -178,36 +205,39 @@ export default function Scan() {
       Quagga.onDetected((result) => {
         const code = result.codeResult.code;
         const now = Date.now();
-        
+
         // Si ya se confirmó un código, no procesar más
         if (codigoConfirmado) return;
-        
-        // Throttle: solo permitir una detección cada 50ms
-        if (ultimaDeteccion && now - ultimaDeteccion < 50) {
+
+        // Throttle: solo permitir una detección cada 100ms
+        if (ultimaDeteccion && now - ultimaDeteccion < 100) {
           return;
         }
-        
+
         setUltimaDeteccion(now);
-        
+
         // Agregar al buffer de detecciones
         setCodigoBuffer(prev => {
-          const newBuffer = [...prev, { code, timestamp: now }];
-          
-          // Limpiar detecciones antiguas (más de 1000ms)
-          const filteredBuffer = newBuffer.filter(item => 
-            now - item.timestamp < 1000
+          // Limpiar detecciones antiguas (más de 1500ms)
+          const filteredBuffer = prev.filter(item =>
+            now - item.timestamp < 1500
           );
-          
+
           // Verificar si tenemos 3 detecciones del mismo código
           const sameCodeDetections = filteredBuffer.filter(item => item.code === code);
-          
-          if (sameCodeDetections.length >= 3) {
-            // ¡Código confirmado!
+
+          if (sameCodeDetections.length >= 2) {
+            // Ya tenemos 2, esta es la tercera - ¡Código confirmado!
+            setCodigoConfirmado(true);
             setTimeout(() => confirmarCodigo(code), 100);
             return [];
           }
-          
-          return filteredBuffer;
+
+          // Agregar la nueva detección
+          const newBuffer = [...filteredBuffer, { code, timestamp: now }];
+
+          // Mantener solo las últimas 3 detecciones
+          return newBuffer.slice(-3);
         });
       });
     };
@@ -264,13 +294,18 @@ export default function Scan() {
           }
         );
         
+        if (response.status === 401) {
+          handleUnauthorized();
+          return;
+        }
+
         if (response.ok) {
           const prod = await response.json();
-                  setProducto(prod);
+          setProducto(prod);
           setNombreProd(String(prod.nombre || ""));
           setTipo(String(prod.tipo || ""));
           setPesoEstimado(prod.pesoEstimado ? String(prod.pesoEstimado) : "");
-        setError("");
+          setError("");
         } else if (response.status === 404) {
           // Producto no encontrado
           setProducto(null);
@@ -315,15 +350,21 @@ export default function Scan() {
         })
       });
       
+      if (res.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+
       const data = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(data.error || res.statusText);
       }
 
       setProducto(data);
       setError("");
-      alert("✅ Producto agregado correctamente. Ahora puedes guardar el reciclaje.");
+      setProductoAgregado(data);
+      setMostrarModalProducto(true);
     } catch (e) {
       alert("Error al registrar producto: " + e.message);
     }
@@ -383,27 +424,26 @@ export default function Scan() {
         },
         body: JSON.stringify(reciclaje)
       });
-      
+
+      if (res.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+
       const data = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(data.error || res.statusText);
       }
 
-      const puntosMsg = data.puntosObtenidos 
-        ? `\n🏆 ¡Ganaste ${data.puntosObtenidos} puntos!` 
-        : '';
-      
-      const distanciaMsg = data.distancia 
-        ? `\n📍 Distancia: ${data.distancia.toFixed(1)} km` 
-        : '';
+      // Mostrar modal de éxito
+      setDatosExito({
+        puntos: data.puntosObtenidos || 0,
+        distancia: data.distancia || 0,
+        advertencia: !esCompatible
+      });
+      setMostrarModalExito(true);
 
-      const compatibilidadMsg = !esCompatible 
-        ? `\n⚠️ Recuerda verificar que acepten tu material` 
-        : '';
-
-      alert(`✅ Reciclaje registrado correctamente${puntosMsg}${distanciaMsg}${compatibilidadMsg}`);
-      
       // limpio todo
       limpiarFormulario();
     } catch (e) {
@@ -454,20 +494,28 @@ export default function Scan() {
 
   const reiniciarScanner = () => {
     stopScanner();
-    
+
     // Limpiar todos los estados
     setCodigo("");
+    setProducto(null);
+    setNombreProd("");
+    setTipo("");
+    setPesoEstimado("");
     setError("");
     setCodigoBuffer([]);
     setCodigoConfirmado(false);
     setUltimaDeteccion(null);
-    
-    // Reiniciar el scanner si estamos en modo código
-    if (modo === "codigo") {
-      setTimeout(() => {
-        setModo("codigo"); // Forzar re-render del useEffect
-      }, 200);
-    }
+    setPuntoSeleccionado(null);
+
+    // Forzar reinicio del scanner
+    setTimeout(() => {
+      if (modo === "codigo") {
+        // Trigger re-mount del scanner
+        const tempModo = modo;
+        setModo("manual");
+        setTimeout(() => setModo(tempModo), 100);
+      }
+    }, 100);
   };
 
   // Función para abrir formulario de nuevo punto
@@ -477,6 +525,8 @@ export default function Scan() {
         nombre: "",
         direccion: "",
         tipo: tipo,
+        horarios: "",
+        observaciones: "",
         lat: userLocation.lat,
         lng: userLocation.lng
       });
@@ -513,13 +563,19 @@ export default function Scan() {
       if (response.ok) {
         const puntoCreado = await response.json();
         alert(`✅ Punto de reciclaje "${puntoCreado.nombre}" creado exitosamente`);
-        
+
         // Cerrar formulario y recargar puntos
         setMostrarFormPunto(false);
-        setNuevoPunto({ nombre: "", direccion: "", tipo: "", lat: null, lng: null });
+        setNuevoPunto({ nombre: "", direccion: "", tipo: "", horarios: "", observaciones: "", lat: null, lng: null });
         cargarPuntosCercanos();
       } else {
-        throw new Error("Error al crear punto");
+        if (response.status === 401) {
+          handleUnauthorized();
+          return;
+        }
+
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
       }
     } catch (err) {
       alert("Error al crear punto de reciclaje: " + err.message);
@@ -530,43 +586,40 @@ export default function Scan() {
 
   return (
     <div className="scan-container">
-      <h2>Escanear / Registrar Reciclaje</h2>
+      <div className="header-section">
+        {/* Toggle scanner - ahora a la izquierda */}
+        {!codigoConfirmado && (
+          <button
+            className={`toggle-scanner ${isScanning ? 'active' : ''}`}
+            onClick={() => {
+              if (isScanning) {
+                setModo("manual");
+                stopScanner();
+              } else {
+                setModo("codigo");
+              }
+            }}
+          >
+            {isScanning ? '✏️ Registrar manual' : '📷 Escanear código'}
+          </button>
+        )}
 
-      {/* Información de ubicación */}
+        <h2>Registrar Reciclaje</h2>
+      </div>
+
+      {/* Información de ubicación - Solo mostrar si hay error */}
       {loadingLocation && (
         <div className="location-info">
           <p>📍 Obteniendo tu ubicación...</p>
         </div>
       )}
-      
-      {userLocation && (
-        <div className="location-info">
-          <p>📍 Ubicación obtenida correctamente</p>
-        </div>
-      )}
-
-      {/* switch de modo */}
-      <div className="scan-modo">
-        <button
-          className={modo === "codigo" ? "activo" : ""}
-          onClick={() => cambiarModo("codigo")}
-        >
-          📷 Con código de barras
-        </button>
-        <button
-          className={modo === "manual" ? "activo" : ""}
-          onClick={() => cambiarModo("manual")}
-        >
-          ✍️ Registro manual
-        </button>
-      </div>
 
       {/* Layout principal: Scanner + Formulario */}
-      <div className="main-layout">
-        
-        {/* Columna Izquierda: Scanner */}
+      <div className={`main-layout ${codigoConfirmado || modo === "manual" ? 'sin-scanner' : ''}`}>
+
+        {/* Columna Izquierda: Scanner - Solo mostrar si modo es código y no está confirmado */}
+        {modo === "codigo" && !codigoConfirmado && (
         <div className="scanner-column">
-      {modo === "codigo" && (
         <div className="modo-codigo">
               <div className="scanner-container">
                 <div 
@@ -650,37 +703,41 @@ export default function Scan() {
                   <div className="codigo-detectado">
                     <p>✅ <strong>Código confirmado:</strong></p>
                     <span className="codigo-text">{codigo}</span>
-                    <p className="scan-complete">✨ Scanner detenido. Para escanear otro, usa "📷 Nuevo código"</p>
+                    <p className="scan-complete">✨ Scanner detenido. Para escanear otro, usa "🔄 Reiniciar"</p>
                   </div>
                 )}
-          {error && <p className="error">{error}</p>}
-              </div>
-        </div>
-      )}
-
-          {modo === "manual" && (
-            <div className="modo-manual">
-              <div className="manual-placeholder">
-                <h3>✍️ Registro Manual</h3>
-                <p>Completa el formulario de la derecha para registrar tu reciclaje manualmente.</p>
+          {error && modo === "codigo" && !error.includes("Producto no registrado") && <p className="error">{error}</p>}
               </div>
             </div>
-          )}
         </div>
+      )}
 
         {/* Columna Derecha: Formulario */}
         <div className="form-column">
       <div className="registro-producto">
+            {codigoConfirmado && modo === "codigo" && (
+              <div className="codigo-confirmado-badge">
+                ✅ Código escaneado: <strong>{codigo}</strong>
+                <button
+                  className="btn-volver-scanner"
+                  onClick={reiniciarScanner}
+                  title="Volver al scanner"
+                >
+                  🔄 Escanear otro
+                </button>
+              </div>
+            )}
+
             <h3>{producto ? "Producto encontrado" : "Datos del producto"}</h3>
-            
+
         {modo === "manual" && (
           <label>
-            Código:
+            Código (opcional):
             <input
               type="text"
               value={codigo}
               onChange={e => setCodigo(e.target.value)}
-                  placeholder="Ingresa el código del producto"
+                  placeholder="Opcional - Solo si tiene código"
             />
           </label>
         )}
@@ -811,21 +868,28 @@ export default function Scan() {
               </div>
             )}
 
-            {error && <p className="error">{error}</p>}
+            {error && !error.includes("Producto no registrado") && <p className="error">{error}</p>}
+
+            {error && error.includes("Producto no registrado") && (
+              <div className="info-box warning">
+                <p>📝 <strong>Producto no encontrado</strong></p>
+                <p>Completa los campos para registrar este producto en la base de datos.</p>
+              </div>
+            )}
 
             <div className="botones-accion">
               {!producto && codigo && nombreProd && tipo && pesoEstimado && (
-          <button className="btn orange" onClick={registrarProducto}>
+                <button className="btn orange" onClick={registrarProducto}>
                   📝 Registrar Producto Nuevo
-          </button>
-        )}
-              
+                </button>
+              )}
+
               {(producto || (modo === "manual" && tipo && pesoEstimado)) && puntoSeleccionado && (
-          <button className="btn green" onClick={guardarReciclaje}>
+                <button className="btn green" onClick={guardarReciclaje}>
                   ♻️ Guardar Reciclaje
-          </button>
-        )}
-      </div>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -834,63 +898,211 @@ export default function Scan() {
       {mostrarFormPunto && (
         <div className="modal-overlay" onClick={() => setMostrarFormPunto(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h3>➕ Agregar Punto de Reciclaje</h3>
+            <button
+              className="modal-close"
+              onClick={() => setMostrarFormPunto(false)}
+              type="button"
+            >
+              ✕
+            </button>
+
+            <h3>Agregar Punto de Reciclaje</h3>
+
             <form onSubmit={e => { e.preventDefault(); crearPuntoReciclaje(); }}>
-              <label>
-                Nombre del punto:
-                <input
-                  type="text"
-                  value={nuevoPunto.nombre}
-                  onChange={e => setNuevoPunto({...nuevoPunto, nombre: e.target.value})}
-                  placeholder="Ej: Centro de Reciclaje Municipal"
-                  required
-                />
-              </label>
-              
-              <label>
-                Dirección:
-                <input
-                  type="text"
-                  value={nuevoPunto.direccion}
-                  onChange={e => setNuevoPunto({...nuevoPunto, direccion: e.target.value})}
-                  placeholder="Ej: Av. Colón 123, Córdoba"
-                  required
-                />
-              </label>
-              
-              <label>
-                Tipo de material:
-                <select 
-                  value={nuevoPunto.tipo} 
-                  onChange={e => setNuevoPunto({...nuevoPunto, tipo: e.target.value})}
-                  required
-                >
-                  <option value={tipo}>{tipo}</option>
-                  <option value="Plástico">Plástico</option>
-                  <option value="Vidrio">Vidrio</option>
-                  <option value="Cartón">Cartón</option>
-                  <option value="Papel">Papel</option>
-                  <option value="Metal">Metal</option>
-                </select>
-              </label>
-              
+              <div className="form-row form-row-split">
+                <div className="form-field">
+                  <label>
+                    Nombre del Punto <span className="required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={nuevoPunto.nombre}
+                    onChange={e => setNuevoPunto({...nuevoPunto, nombre: e.target.value})}
+                    placeholder="Ej: Centro de Reciclaje Municipal"
+                    required
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label>
+                    Dirección <span className="required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={nuevoPunto.direccion}
+                    onChange={e => setNuevoPunto({...nuevoPunto, direccion: e.target.value})}
+                    placeholder="Ej: Río Paraná E Islas Malvinas, X5151 La Calera, Córdoba"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <label>
+                  Tipos de Materiales <span className="required">*</span>
+                  <div className="material-types-grid">
+                    {['Plástico', 'Vidrio', 'Cartón', 'Papel', 'Metal', 'Electrónicos', 'Orgánico', 'Textil'].map(material => {
+                      const emojis = {
+                        'Plástico': '🧴',
+                        'Vidrio': '🍾',
+                        'Cartón': '📦',
+                        'Papel': '📄',
+                        'Metal': '🥫',
+                        'Electrónicos': '💻',
+                        'Orgánico': '🌿',
+                        'Textil': '👕'
+                      };
+
+                      return (
+                        <div
+                          key={material}
+                          className={`material-type-option ${nuevoPunto.tipo === material ? 'selected' : ''}`}
+                          onClick={() => setNuevoPunto({...nuevoPunto, tipo: material})}
+                        >
+                          <span className="material-icon">{emojis[material]}</span>
+                          <span className="material-label">{material}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </label>
+              </div>
+
+              <div className="form-row">
+                <label>
+                  Horarios <span className="optional">(opcional)</span>
+                  <input
+                    type="text"
+                    value={nuevoPunto.horarios || ''}
+                    onChange={e => setNuevoPunto({...nuevoPunto, horarios: e.target.value})}
+                    placeholder="Ej: Lun-Vie 8:00-17:00"
+                  />
+                </label>
+              </div>
+
+              <div className="form-row">
+                <label>
+                  Observaciones <span className="optional">(opcional)</span>
+                  <textarea
+                    value={nuevoPunto.observaciones || ''}
+                    onChange={e => setNuevoPunto({...nuevoPunto, observaciones: e.target.value})}
+                    placeholder="Información adicional, requisitos especiales, etc."
+                    rows="3"
+                    maxLength="200"
+                  />
+                  <span className="char-count">{(nuevoPunto.observaciones || '').length}/200</span>
+                </label>
+              </div>
+
               <div className="modal-actions">
-                <button 
-                  type="button" 
-                  className="btn orange" 
-                  onClick={() => setMostrarFormPunto(false)}
-                >
-                  Cancelar
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn green" 
-                  disabled={creandoPunto}
+                <button
+                  type="submit"
+                  className="btn green"
+                  disabled={creandoPunto || !nuevoPunto.nombre || !nuevoPunto.direccion || !nuevoPunto.tipo}
                 >
                   {creandoPunto ? "Creando..." : "✅ Crear Punto"}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de éxito */}
+      {mostrarModalExito && (
+        <div className="modal-overlay" onClick={() => setMostrarModalExito(false)}>
+          <div className="modal-exito" onClick={e => e.stopPropagation()}>
+            <div className="modal-exito-header">
+              <div className="success-icon">✓</div>
+              <h3>Reciclaje Registrado</h3>
+            </div>
+
+            <div className="modal-exito-content">
+              <p className="success-message">Tu reciclaje se registró correctamente</p>
+
+              {datosExito.puntos > 0 && (
+                <div className="exito-stat puntos">
+                  <div className="stat-icon">🏆</div>
+                  <div className="stat-info">
+                    <div className="stat-label">Ganaste</div>
+                    <div className="stat-value">{datosExito.puntos} puntos</div>
+                  </div>
+                </div>
+              )}
+
+              {datosExito.distancia > 0 && (
+                <div className="exito-stat distancia">
+                  <div className="stat-icon">📍</div>
+                  <div className="stat-info">
+                    <div className="stat-label">Distancia</div>
+                    <div className="stat-value">{datosExito.distancia.toFixed(1)} km</div>
+                  </div>
+                </div>
+              )}
+
+              {datosExito.advertencia && (
+                <div className="exito-advertencia">
+                  <span className="advertencia-icon">⚠️</span>
+                  <span>Recuerda verificar que acepten tu material</span>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-exito-actions">
+              <button
+                className="btn-exito-cerrar"
+                onClick={() => setMostrarModalExito(false)}
+              >
+                Aceptar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de producto agregado */}
+      {mostrarModalProducto && productoAgregado && (
+        <div className="modal-overlay" onClick={() => setMostrarModalProducto(false)}>
+          <div className="modal-producto" onClick={e => e.stopPropagation()}>
+            <div className="modal-producto-header">
+              <div className="producto-icon">📦</div>
+              <h3>Producto Agregado</h3>
+            </div>
+
+            <div className="modal-producto-content">
+              <p className="producto-mensaje">El producto se agregó correctamente a la base de datos</p>
+
+              <div className="producto-info-card">
+                <div className="producto-detail">
+                  <span className="detail-label">Nombre</span>
+                  <span className="detail-value">{productoAgregado.nombre}</span>
+                </div>
+
+                <div className="producto-detail">
+                  <span className="detail-label">Material</span>
+                  <span className="detail-value material-badge">{productoAgregado.tipo}</span>
+                </div>
+
+                <div className="producto-detail">
+                  <span className="detail-label">Código</span>
+                  <span className="detail-value codigo-badge">{productoAgregado.codigo}</span>
+                </div>
+              </div>
+
+              <div className="producto-siguiente">
+                <div className="siguiente-icon">👉</div>
+                <p>Ahora puedes continuar y guardar el reciclaje</p>
+              </div>
+            </div>
+
+            <div className="modal-producto-actions">
+              <button
+                className="btn-producto-continuar"
+                onClick={() => setMostrarModalProducto(false)}
+              >
+                Continuar
+              </button>
+            </div>
           </div>
         </div>
       )}

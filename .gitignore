@@ -31,3 +31,10 @@ firebase-debug.*
 firebase-hosting.log*
 firebase-debug.*
 firebase-debug.*
+
+# Windows nul files
+nul
+**/nul
+
+# Backup files
+*.backup

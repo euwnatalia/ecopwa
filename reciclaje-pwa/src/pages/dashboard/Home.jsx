@@ -1,13 +1,17 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { auth } from "../../firebase/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { userService } from "../../services/userService";
 import API_URL from "../../config/api.js";
 import "./Home.css";
 
-function Home({ userDetails }) {
+function Home({ userDetails: propsUserDetails }) {
   const navigate = useNavigate();
+  const context = useOutletContext();
+  const userDetails = propsUserDetails || context?.userDetails;
+  const onLogout = context?.onLogout;
+
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState(null);
   const [achievements, setAchievements] = useState([]);
@@ -19,6 +23,15 @@ function Home({ userDetails }) {
   const [ecoTips, setEcoTips] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [commerceStats, setCommerceStats] = useState(null);
+
+  // Función para manejar errores 401 automáticamente
+  const handleUnauthorized = () => {
+    if (onLogout) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      onLogout();
+    }
+  };
 
   // Consejos ecológicos rotativos
   const ecoTipsDatabase = [
@@ -85,16 +98,17 @@ function Home({ userDetails }) {
         await loadCommerceData();
       } else {
         // Cargar estadísticas y logros para usuarios recicladores
-        const [userStats, userAchievements] = await Promise.all([
+        const [userStats, userAchievements, activityData] = await Promise.all([
           userService.getUserStats(),
-          userService.getUserAchievements()
+          userService.getUserAchievements(),
+          userService.getRecentActivity()
         ]);
 
         setStats(userStats);
         setAchievements(userAchievements.slice(0, 3));
 
         generateWeeklyGoals(userStats);
-        generateRecentActivity(userStats);
+        generateRecentActivityFromData(activityData, userStats);
       }
 
     } catch (err) {
@@ -111,6 +125,11 @@ function Home({ userDetails }) {
       const response = await fetch(`${API_URL}/reciclajes/comercio`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      if (response.status === 401) {
+        handleUnauthorized();
+        return;
+      }
 
       if (response.ok) {
         const reciclajes = await response.json();
@@ -212,37 +231,49 @@ function Home({ userDetails }) {
     setWeeklyGoals(goals);
   };
 
-  // Generar actividad reciente simulada
-  const generateRecentActivity = (userStats) => {
-    if (!userStats) return;
-    
-    const activities = [
-      { 
-        icon: "♻️", 
-        text: `Reciclaste ${Math.floor(Math.random() * 3) + 1} ${Object.keys(userStats.tiposReciclados || {})[0] || 'objetos'}`,
-        time: "Hace 2 horas",
-        type: "recycle"
-      },
-      { 
-        icon: "🏆", 
-        text: "¡Nuevo logro desbloqueado!",
-        time: "Hace 1 día",
-        type: "achievement"
-      },
-      { 
-        icon: "📍", 
-        text: "Visitaste un nuevo punto de reciclaje",
-        time: "Hace 2 días",
-        type: "location"
-      },
-      { 
-        icon: "🌱", 
-        text: `Alcanzaste el nivel ${Math.floor((userStats.puntosTotal || 0) / 500) + 1}`,
-        time: "Hace 3 días",
-        type: "level"
+  // Generar actividad reciente desde datos reales
+  const generateRecentActivityFromData = (activityData, userStats) => {
+    if (!activityData) return;
+
+    const { reciclajes, logros } = activityData;
+    const activities = [];
+
+    // Agregar reciclajes recientes (máximo 2 más recientes)
+    if (reciclajes && reciclajes.length > 0) {
+      reciclajes.slice(0, 2).forEach(reciclaje => {
+        activities.push({
+          icon: getTypeIcon(reciclaje.tipo),
+          text: `Reciclaste ${reciclaje.cantidad || 1}kg de ${reciclaje.tipo}`,
+          time: getTimeAgo(reciclaje.fechaCreacion),
+          type: "recycle"
+        });
+      });
+    }
+
+    // Agregar logros recientes desbloqueados (máximo 1)
+    if (logros && logros.length > 0) {
+      const logrosCompletados = logros.filter(l => l.completado);
+      if (logrosCompletados.length > 0) {
+        const logro = logrosCompletados[0];
+        activities.push({
+          icon: "🏆",
+          text: `¡Desbloqueaste: ${logro.titulo.substring(2)}!`,
+          time: "Recientemente",
+          type: "achievement"
+        });
       }
-    ];
-    
+    }
+
+    // Si no hay actividad reciente real, mostrar nivel actual
+    if (activities.length === 0 && userStats) {
+      activities.push({
+        icon: "🌱",
+        text: `Estás en el nivel ${Math.floor((userStats.puntosTotal || 0) / 500) + 1}`,
+        time: "Ahora",
+        type: "level"
+      });
+    }
+
     setRecentActivity(activities.slice(0, 3));
   };
 

@@ -8,7 +8,7 @@ const app = express();
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
-  : [process.env.FRONTEND_URL || 'http://localhost:5173'];
+  : [process.env.FRONTEND_URL || 'http://localhost:5174'];
 
 if (process.env.NODE_ENV === 'production' && process.env.FRONTEND_URL && !process.env.FRONTEND_URL.includes('localhost')) {
   if (!process.env.FRONTEND_URL.includes('www.')) {
@@ -19,8 +19,17 @@ if (process.env.NODE_ENV === 'production' && process.env.FRONTEND_URL && !proces
 
 const corsOptions = {
   origin: function (origin, callback) {
+    // Permitir peticiones sin origin (como curl, Postman, etc)
     if (!origin) return callback(null, true);
 
+    // En desarrollo, permitir localhost
+    if (process.env.NODE_ENV !== 'production') {
+      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        return callback(null, true);
+      }
+    }
+
+    // Verificar contra orígenes permitidos
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -30,7 +39,7 @@ const corsOptions = {
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 

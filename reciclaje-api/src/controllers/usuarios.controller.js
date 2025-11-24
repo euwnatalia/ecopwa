@@ -116,4 +116,46 @@ async function updateUserType(req, res) {
   }
 }
 
-module.exports = { getUsers, createUser, getUserByUid, updateUserType };
+async function updateUser(req, res) {
+  try {
+    const { uid } = req.user;
+    const { nombre } = req.body;
+
+    const snap = await db.collection("usuarios").where("uid", "==", uid).get();
+
+    if (snap.empty) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    const userDoc = snap.docs[0];
+    const userData = userDoc.data();
+
+    // Actualizar nombre del usuario
+    await userDoc.ref.update({ nombre });
+
+    // Si es comercio, actualizar también los puntos de reciclaje asociados
+    if (userData.tipo === 'comercio') {
+      const puntosSnap = await db.collection('puntos')
+        .where('creadoPor', '==', uid)
+        .where('esComercio', '==', true)
+        .get();
+
+      const batch = db.batch();
+      puntosSnap.docs.forEach(doc => {
+        const puntoData = doc.data();
+        const tipoMaterial = puntoData.tipo;
+        batch.update(doc.ref, {
+          nombre: `${nombre} - ${tipoMaterial}`
+        });
+      });
+      await batch.commit();
+    }
+
+    res.json({ message: "Usuario actualizado correctamente", nombre });
+  } catch (error) {
+    console.error("Error actualizando usuario:", error);
+    res.status(500).json({ error: "Error al actualizar usuario" });
+  }
+}
+
+module.exports = { getUsers, createUser, getUserByUid, updateUserType, updateUser };

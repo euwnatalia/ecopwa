@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useOutletContext } from "react-router-dom";
 import {
   GoogleMap,
   useJsApiLoader,
@@ -16,6 +17,16 @@ const CONTAINER_STYLE = { width: "100%", height: "70vh", minHeight: "500px" };
 const DEFAULT_CENTER = { lat: -31.4173, lng: -64.1833 }; // Córdoba, Argentina
 
 export default function MapView() {
+  const { onLogout } = useOutletContext();
+
+  // Función para manejar errores 401 automáticamente
+  const handleUnauthorized = () => {
+    if (onLogout) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      onLogout();
+    }
+  };
   const [puntos, setPuntos] = useState([]);
   const [puntosOriginales, setPuntosOriginales] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -77,16 +88,21 @@ export default function MapView() {
       }
 
       const response = await fetch(
-        `${API_URL}/puntos?${params}`, 
+        `${API_URL}/puntos?${params}`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
-      
+
+      if (response.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       setPuntosOriginales(data);
       aplicarFiltros(data);
@@ -232,12 +248,17 @@ export default function MapView() {
         body: JSON.stringify(formData)
       });
 
+      if (response.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+
       if (!response.ok) {
         const err = await response.json();
         throw new Error(err.error || response.statusText);
       }
 
-      window.showToast && window.showToast("✅ Punto registrado exitosamente", "success");
+      window.showToast && window.showToast("Punto registrado exitosamente", "success");
       setMostrarFormulario(false);
       setPuntoTemporal(null);
       setModoRegistro(false);
@@ -266,6 +287,11 @@ export default function MapView() {
         }
       );
 
+      if (response.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+
       if (!response.ok) {
         const err = await response.json();
         throw new Error(err.error || response.statusText);
@@ -273,7 +299,7 @@ export default function MapView() {
 
 
       const result = await response.json();
-      window.showToast && window.showToast(`✅ ${result.message}`, "success");
+      window.showToast && window.showToast(result.message, "success");
 
       // Actualizar el punto seleccionado si es el mismo
       if (selected && selected.id === puntoId) {
@@ -315,13 +341,18 @@ export default function MapView() {
         }
       );
 
+      if (response.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+
       if (!response.ok) {
         const err = await response.json();
         throw new Error(err.error || response.statusText);
       }
 
       const result = await response.json();
-      window.showToast && window.showToast(`👎 ${result.message}`, "warning");
+      window.showToast && window.showToast(result.message, "warning");
 
       // Actualizar el punto seleccionado si es el mismo
       if (selected && selected.id === puntoAReportar.id) {
@@ -386,9 +417,12 @@ export default function MapView() {
               className="btn-close-intro"
               onClick={() => {
                 setMostrarIntro(false);
-                localStorage.setItem('mapIntroSeen', 'true');
-                setMostrarTooltip(true);
-                setTimeout(() => setMostrarTooltip(false), 4000);
+                const hasSeenIntro = localStorage.getItem('mapIntroSeen');
+                if (!hasSeenIntro) {
+                  localStorage.setItem('mapIntroSeen', 'true');
+                  setMostrarTooltip(true);
+                  setTimeout(() => setMostrarTooltip(false), 4000);
+                }
               }}
             >
               ¡Entendido, empezar!
@@ -534,13 +568,13 @@ export default function MapView() {
                               const material = getMaterialByValue(tipo);
                               return (
                                 <span key={tipo} className="material-tag" style={{backgroundColor: material.color}}>
-                                  {material.icon} {material.label}
+                                  {material.label}
                                 </span>
                               );
                             })
                           ) : selected.tipo ? (
                             <span className="material-tag" style={{backgroundColor: getMaterialByValue(selected.tipo).color}}>
-                              {getMaterialByValue(selected.tipo).icon} {getMaterialByValue(selected.tipo).label}
+                              {getMaterialByValue(selected.tipo).label}
                             </span>
                           ) : (
                             <span className="no-materials">Sin información de materiales</span>
@@ -617,30 +651,30 @@ export default function MapView() {
                         </span>
                       </div>
 
-                      {/* Acciones */}
+                      {/* Acciones - Botones sin emojis */}
                       <div className="punto-actions">
                         {selected.activo !== false && (
                           <>
-                            <button 
+                            <button
                               className="btn-action btn-validar"
                               onClick={() => validarPunto(selected.id)}
                             >
-                              👍 Validar
+                              Validar
                             </button>
-                            <button 
+                            <button
                               className="btn-action btn-invalidar"
                               onClick={() => mostrarReporte(selected)}
                             >
-                              👎 Reportar
+                              Reportar
                             </button>
                           </>
                         )}
                         {selected.activo === false && selected.creadoPor === 'usuario_actual' && (
-                          <button 
+                          <button
                             className="btn-action btn-reactivar"
                             onClick={() => {/* implementar reactivar */}}
                           >
-                            🔄 Reactivar
+                            Reactivar
                           </button>
                         )}
                       </div>

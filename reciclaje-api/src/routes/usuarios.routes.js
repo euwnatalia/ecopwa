@@ -2,7 +2,7 @@ const express = require('express');
 const { body } = require('express-validator');
 const router = express.Router();
 
-const { getUsers, createUser, getUserByUid, updateUserType } = require('../controllers/usuarios.controller');
+const { getUsers, createUser, getUserByUid, updateUserType, updateUser } = require('../controllers/usuarios.controller');
 const validate   = require('../middlewares/validation');
 const verifyToken = require('../middlewares/auth');   // <— ¡IMPORTAR AQUÍ!
 
@@ -26,6 +26,9 @@ router.get('/all', getUsers);
 
 // PUT /api/usuarios - Actualizar tipo de usuario
 router.put('/', verifyToken, updateUserType);
+
+// PATCH /api/usuarios - Actualizar datos del usuario (nombre, etc)
+router.patch('/', verifyToken, updateUser);
 
 // GET /api/usuarios/me
 router.get('/me', verifyToken, (req, res) => {

@@ -52,7 +52,16 @@ export default defineConfig(({ command, mode }) => {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+        'Cross-Origin-Embedder-Policy': 'unsafe-none'
+      },
+      // Configuración HMR para Windows
+      hmr: {
+        protocol: 'ws',
+        host: 'localhost',
+        port: 5174,
+        clientPort: 5174
       }
     },
     

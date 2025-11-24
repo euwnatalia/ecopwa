@@ -94,14 +94,14 @@ function Sidebar({ userDetails, onLogout }) {
             
             {!isComercio && (
               <li>
-                <Link 
+                <Link
                   to="/dashboard/scan"
                   className={location.pathname === '/dashboard/scan' ? 'active' : ''}
                 >
                   <span className="sidebar-icon">
-                    <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4" stroke="#fff" strokeWidth="2"/><path d="M7 7h10v10H7V7z" stroke="#fff" strokeWidth="2"/></svg>
+                    <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="17" cy="17" r="3" stroke="#fff" strokeWidth="2"/><path d="M17 15v4M15 17h4" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>
                   </span>
-                  Escanear
+                  Reciclar
                 </Link>
               </li>
             )}

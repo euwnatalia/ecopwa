@@ -8,7 +8,7 @@ import "./Profile.css";
 
 function Profile() {
   const navigate = useNavigate();
-  const { userDetails } = useOutletContext();
+  const { userDetails, onLogout } = useOutletContext();
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState(null);
   const [achievements, setAchievements] = useState([]);
@@ -17,6 +17,15 @@ function Profile() {
   const [avatarError, setAvatarError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [commerceStats, setCommerceStats] = useState(null);
+
+  // Función para manejar errores 401 automáticamente
+  const handleUnauthorized = () => {
+    if (onLogout) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      onLogout();
+    }
+  };
   
   // Estados para edición de perfil
   const [isEditing, setIsEditing] = useState(false);
@@ -24,7 +33,8 @@ function Profile() {
     displayName: '',
     bio: '',
     location: '',
-    interests: []
+    interests: [],
+    nombreComercio: ''
   });
   const [saving, setSaving] = useState(false);
   
@@ -42,7 +52,8 @@ function Profile() {
           displayName: currentUser.displayName || '',
           bio: currentUser.bio || '',
           location: currentUser.location || '',
-          interests: currentUser.interests || []
+          interests: currentUser.interests || [],
+          nombreComercio: userDetails?.nombre || ''
         }));
         loadUserData();
       } else {
@@ -63,16 +74,17 @@ function Profile() {
         // Cargar estadísticas específicas para comercio
         await loadCommerceData();
       } else {
-        // Cargar estadísticas y logros para usuarios recicladores
-        const [userStats, userAchievements] = await Promise.all([
+        // Cargar estadísticas, logros y actividad real
+        const [userStats, userAchievements, activityData] = await Promise.all([
           userService.getUserStats(),
-          userService.getUserAchievements()
+          userService.getUserAchievements(),
+          userService.getRecentActivity()
         ]);
 
         setStats(userStats);
         setAchievements(userAchievements);
 
-        generateWeeklyProgress(userStats);
+        generateWeeklyProgressFromData(activityData.reciclajes);
       }
     } catch (err) {
       console.error('Error cargando datos del usuario:', err);
@@ -88,6 +100,11 @@ function Profile() {
       const response = await fetch(`${API_URL}/reciclajes/comercio`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      if (response.status === 401) {
+        handleUnauthorized();
+        return;
+      }
 
       if (response.ok) {
         const reciclajes = await response.json();
@@ -125,19 +142,28 @@ function Profile() {
     }
   };
 
-  // Generar datos de progreso semanal
-  const generateWeeklyProgress = (userStats) => {
-    if (!userStats) return;
-    
+  // Generar datos de progreso semanal desde datos reales
+  const generateWeeklyProgressFromData = (reciclajes) => {
     const days = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-    const baseActivity = userStats.totalReciclajes / 7; // Promedio por día
-    
-    const progress = days.map((day, index) => ({
-      day,
-      activity: Math.max(0, Math.floor(baseActivity + (Math.random() - 0.5) * baseActivity)),
-      date: new Date(Date.now() - (6 - index) * 24 * 60 * 60 * 1000)
-    }));
-    
+    const now = new Date();
+
+    const progress = days.map((day, index) => {
+      const targetDate = new Date(now);
+      targetDate.setDate(now.getDate() - (6 - index));
+
+      // Contar reciclajes reales en ese día
+      const dayRecycleCount = reciclajes?.filter(r => {
+        const reciclajeDate = new Date(r.fechaCreacion);
+        return reciclajeDate.toDateString() === targetDate.toDateString();
+      }).length || 0;
+
+      return {
+        day,
+        activity: dayRecycleCount,
+        date: targetDate
+      };
+    });
+
     setWeeklyProgress(progress);
   };
 
@@ -169,23 +195,52 @@ function Profile() {
   const handleUpdateProfile = async () => {
     try {
       setSaving(true);
-      
-      await updateProfile(auth.currentUser, {
-        displayName: editForm.displayName
-      });
-      
-      // Aquí podrías también actualizar otros campos en Firestore
-      // como bio, location, interests
-      
-      setUser(prev => ({
-        ...prev,
-        displayName: editForm.displayName
-      }));
-      
+      const isCommerce = userDetails?.tipo === 'comercio';
+
+      if (isCommerce) {
+        // Para comercios, actualizar el nombre del comercio en el backend
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_URL}/usuarios`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify({
+            nombre: editForm.nombreComercio
+          })
+        });
+
+        if (response.status === 401) {
+          handleUnauthorized();
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error('Error al actualizar el nombre del comercio');
+        }
+
+        // Actualizar en el estado local
+        window.showToast && window.showToast('Nombre del comercio actualizado correctamente', 'success');
+      } else {
+        // Para usuarios, actualizar displayName en Firebase Auth
+        await updateProfile(auth.currentUser, {
+          displayName: editForm.displayName
+        });
+
+        setUser(prev => ({
+          ...prev,
+          displayName: editForm.displayName
+        }));
+      }
+
       setIsEditing(false);
+      // Recargar datos para reflejar cambios
+      await loadUserData();
     } catch (error) {
       console.error('Error actualizando perfil:', error);
       setError('Error al actualizar el perfil');
+      window.showToast && window.showToast('Error al actualizar el perfil', 'error');
     } finally {
       setSaving(false);
     }
@@ -386,7 +441,7 @@ function Profile() {
             <>
               <div className="profile-header-actions">
                 <h2>{user.displayName || 'Usuario Eco'}</h2>
-                <button 
+                <button
                   className="edit-profile-btn"
                   onClick={() => setIsEditing(true)}
                   title="Editar perfil"
@@ -406,25 +461,27 @@ function Profile() {
             </>
           ) : (
             <div className="edit-profile-form">
-              <div className="form-group">
-                <label>Nombre de usuario:</label>
-                <input
-                  type="text"
-                  value={editForm.displayName}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, displayName: e.target.value }))}
-                  placeholder="Tu nombre de usuario"
-                />
-              </div>
-              
+              {!isCommerce && (
+                <div className="form-group">
+                  <label>Nombre de usuario:</label>
+                  <input
+                    type="text"
+                    value={editForm.displayName}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, displayName: e.target.value }))}
+                    placeholder="Tu nombre de usuario"
+                  />
+                </div>
+              )}
+
               <div className="form-actions">
-                <button 
+                <button
                   className="profile-btn primary small"
                   onClick={handleUpdateProfile}
                   disabled={saving}
                 >
                   {saving ? 'Guardando...' : '💾 Guardar'}
                 </button>
-                <button 
+                <button
                   className="profile-btn secondary small"
                   onClick={() => setIsEditing(false)}
                   disabled={saving}
@@ -723,24 +780,6 @@ function Profile() {
         )}
       </div>
 
-      {/* Botones de acción */}
-      <div className="profile-actions">
-        <button 
-          className={`profile-btn primary ${refreshing ? 'loading' : ''}`} 
-          onClick={handleUpdateData}
-          disabled={refreshing}
-        >
-          {refreshing ? '🔄 Actualizando...' : '🔄 Actualizar Datos'}
-        </button>
-        <button className="profile-btn secondary" onClick={handleViewStatistics}>
-          📊 {isCommerce ? 'Ver Estadísticas de Recepción' : 'Ver Estadísticas Completas'}
-        </button>
-        {!isCommerce && (
-          <button className="profile-btn secondary" onClick={handleViewAllAchievements}>
-            🏆 Ver Todos los Logros
-          </button>
-        )}
-      </div>
     </div>
   );
 }
