@@ -112,8 +112,9 @@
 @media (max-width: 768px) {
   .home-container {
     padding: 1rem;
+    padding-top: 3.5rem; /* Espacio para el botón hamburguesa */
   }
-  
+
   .home-section {
     padding: 1rem;
     margin-top: 1.5rem;

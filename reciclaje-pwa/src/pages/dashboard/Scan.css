@@ -15,9 +15,10 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.4rem;
-  gap: 1rem;
+  gap: 0.5rem;
   flex-direction: row;
   position: relative;
+  flex-wrap: wrap;
 }
 
 .scan-container h2 {
@@ -58,9 +59,9 @@
   background: #2196f3;
   color: white;
   border: none;
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.75rem;
   border-radius: 20px;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -69,7 +70,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
+  gap: 0.25rem;
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -1088,29 +1089,33 @@
 @media (max-width: 768px) {
   .scan-container {
     padding: 0.5rem;
+    padding-top: 3.5rem; /* Espacio para el botón hamburguesa */
   }
 
   .header-section {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.5rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: nowrap;
   }
 
   .scan-container h2 {
-    font-size: 1.3rem;
-    text-align: center;
+    font-size: 1.1rem;
+    text-align: left;
+    flex: 1;
+    min-width: 0;
   }
 
   .toggle-scanner {
-    width: 100%;
-    text-align: center;
-    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+    flex-shrink: 0;
   }
 
   .btn-ayuda {
-    width: 100%;
-    justify-content: center;
-    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+    flex-shrink: 0;
   }
   
   .scanner-column {
@@ -1730,5 +1735,210 @@
 
   .ayuda-lista li {
     font-size: 0.85rem;
+  }
+}
+
+/* ==================== ERROR DE CÁMARA ==================== */
+
+.error-camara-container {
+  background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);
+  border: 2px solid #ffcdd2;
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(244, 67, 54, 0.1);
+}
+
+.error-camara-icon {
+  font-size: 4rem;
+  margin-bottom: 0.5rem;
+  line-height: 1;
+}
+
+.error-camara-titulo {
+  color: #c62828;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem 0;
+}
+
+.error-camara-descripcion {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0 0 1rem 0;
+  line-height: 1.4;
+}
+
+/* Instrucciones para permiso bloqueado */
+.error-camara-instrucciones {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.instrucciones-titulo {
+  font-weight: 600;
+  color: #f57c00;
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.instrucciones-pasos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.paso {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: #5d4037;
+}
+
+.paso-numero {
+  background: linear-gradient(135deg, #FF9800, #F57C00);
+  color: white;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.error-camara-acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn-solicitar-permiso {
+  background: linear-gradient(135deg, #2E7D32, #4CAF50);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 25px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(46, 125, 50, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-solicitar-permiso:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(46, 125, 50, 0.4);
+}
+
+.btn-solicitar-permiso:active {
+  transform: translateY(0);
+}
+
+.btn-reintentar-camara {
+  background: linear-gradient(135deg, #FF9800, #F57C00);
+  color: white;
+  border: none;
+  padding: 0.875rem 1.75rem;
+  border-radius: 25px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-reintentar-camara:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+}
+
+.btn-modo-manual {
+  background: white;
+  color: #666;
+  border: 2px solid #ddd;
+  padding: 0.75rem 1.5rem;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-modo-manual:hover {
+  border-color: #2E7D32;
+  color: #2E7D32;
+  background: #f1f8e9;
+}
+
+
+/* Responsive para error de cámara */
+@media (max-width: 600px) {
+  .error-camara-container {
+    padding: 1.25rem;
+    margin: 0;
+  }
+
+  .error-camara-icon {
+    font-size: 3.5rem;
+  }
+
+  .error-camara-titulo {
+    font-size: 1.1rem;
+  }
+
+  .error-camara-descripcion {
+    font-size: 0.85rem;
+  }
+
+  .error-camara-instrucciones {
+    padding: 0.75rem;
+  }
+
+  .instrucciones-titulo {
+    font-size: 0.85rem;
+  }
+
+  .paso {
+    font-size: 0.8rem;
+  }
+
+  .paso-numero {
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
+  }
+
+  .btn-solicitar-permiso {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.95rem;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-reintentar-camara,
+  .btn-modo-manual {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.85rem;
+    padding: 0.6rem 1rem;
   }
 }

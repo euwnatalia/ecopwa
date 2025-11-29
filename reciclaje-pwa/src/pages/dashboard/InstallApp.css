@@ -1,0 +1,288 @@
+.install-app-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.install-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.install-header h1 {
+  color: var(--primary-color);
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.install-subtitle {
+  color: #666;
+  font-size: 1rem;
+  max-width: 500px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+/* Tabs */
+.install-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  background: #f5f5f5;
+  padding: 0.5rem;
+  border-radius: 12px;
+}
+
+.install-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #666;
+}
+
+.install-tab:hover {
+  background: rgba(76, 175, 80, 0.1);
+  color: var(--primary-color);
+}
+
+.install-tab.active {
+  background: var(--primary-color);
+  color: white;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.tab-icon {
+  font-size: 1.2rem;
+}
+
+.tab-label {
+  display: inline;
+}
+
+/* Content */
+.install-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.install-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e0e0e0;
+}
+
+.install-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.install-device-icon {
+  font-size: 3rem;
+}
+
+.install-card-titles h2 {
+  color: #333;
+  font-size: 1.3rem;
+  margin-bottom: 0.25rem;
+}
+
+.browser-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Steps */
+.install-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.install-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.step-number {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.step-text {
+  color: #444;
+  line-height: 1.5;
+  padding-top: 0.25rem;
+  margin: 0;
+}
+
+/* Tip */
+.install-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, #FFF8E1, #FFFDE7);
+  padding: 1rem;
+  border-radius: 12px;
+  border-left: 4px solid #FFC107;
+}
+
+.tip-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.install-tip p {
+  color: #6D4C41;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Benefits */
+.install-benefits {
+  background: linear-gradient(135deg, #E8F5E9, #F1F8E9);
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.install-benefits h3 {
+  color: var(--primary-dark);
+  text-align: center;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.benefit-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: white;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.benefit-icon {
+  font-size: 1.5rem;
+}
+
+.benefit-text {
+  color: #333;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .install-app-container {
+    padding: 1rem;
+  }
+
+  .install-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .install-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .install-tabs {
+    flex-wrap: wrap;
+  }
+
+  .install-tab {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .tab-label {
+    display: none;
+  }
+
+  .install-tab.active .tab-label {
+    display: inline;
+  }
+
+  .install-card {
+    padding: 1.25rem;
+  }
+
+  .install-device-icon {
+    font-size: 2.5rem;
+  }
+
+  .install-card-titles h2 {
+    font-size: 1.1rem;
+  }
+
+  .benefits-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .step-number {
+    width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .install-header h1 {
+    font-size: 1.3rem;
+  }
+
+  .install-card-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .install-card-titles {
+    text-align: center;
+  }
+
+  .step-text {
+    font-size: 0.9rem;
+  }
+
+  .install-tip p {
+    font-size: 0.85rem;
+  }
+}

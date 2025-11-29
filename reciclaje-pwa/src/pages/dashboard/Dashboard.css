@@ -8,13 +8,15 @@
 
 .dashboard-main {
   flex: 1;
-  margin-left: 250px;
+  margin-left: 220px;
   padding: 2rem;
   background-color: #f4f4f4;
   min-height: 100vh;
-  width: calc(100vw - 250px);
+  width: calc(100vw - 220px);
   box-sizing: border-box;
   overflow-x: auto;
+  position: relative;
+  z-index: 1; /* Menor que sidebar (100) para evitar sobreposición */
 }
 
 /* Asegurar que el contenido no se superponga */

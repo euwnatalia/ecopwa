@@ -14,7 +14,7 @@
   text-align: center;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 50; /* Menor que sidebar (100) para evitar sobreposición */
 }
 
 .achievements-header h1 {
@@ -614,9 +614,9 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .achievements-header {
-    padding: 1.5rem 1rem 1rem 1rem;
+    padding: 1.5rem 1rem 1rem 4rem; /* padding-left para el botón hamburguesa */
   }
-  
+
   .achievements-header h1 {
     font-size: 1.6rem;
   }
@@ -687,11 +687,11 @@
   .achievements-container {
     padding: 0;
   }
-  
+
   .achievements-header {
-    padding: 1rem 0.75rem 0.75rem 0.75rem;
+    padding: 1rem 0.75rem 0.75rem 4rem; /* padding-left para el botón hamburguesa */
   }
-  
+
   .achievements-header h1 {
     font-size: 1.4rem;
   }

@@ -8,6 +8,7 @@ import Scan from "./pages/dashboard/Scan";
 import Achievements from "./pages/dashboard/Achievements";
 import Profile from "./pages/dashboard/Profile";
 import ComercioReceive from "./pages/dashboard/ComercioReceive";
+import InstallApp from "./pages/dashboard/InstallApp";
 import ToastContainer from "./components/ToastContainer.jsx";
 import API_URL from "./config/api.js";
 import { setLogoutCallback } from "./utils/authFetch.js";
@@ -150,6 +151,7 @@ function AppContent() {
           <Route path="receive" element={<ComercioReceive />} />
           <Route path="achievements" element={<Achievements userDetails={userDetails || user} />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="install" element={<InstallApp />} />
         </Route>
       </Routes>
       <ToastContainer />

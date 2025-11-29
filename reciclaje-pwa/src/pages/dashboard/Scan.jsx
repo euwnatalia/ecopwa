@@ -54,6 +54,7 @@ export default function Scan() {
   const [productoAgregado, setProductoAgregado] = useState(null);
   const [mostrarAyuda, setMostrarAyuda] = useState(false);
   const [buscandoProducto, setBuscandoProducto] = useState(false);
+  const [errorCamara, setErrorCamara] = useState(null); // Estado para errores de cámara específicos
 
   const scannerRef = useRef(null);
   const detectionTimeoutRef = useRef(null);
@@ -189,7 +190,41 @@ export default function Scan() {
 
       Quagga.init(config, (err) => {
         if (err) {
-          setError("Error al inicializar el scanner: " + err.message);
+          // Manejar errores específicos de cámara
+          let errorInfo = {
+            tipo: 'desconocido',
+            mensaje: 'Error al acceder a la cámara',
+            descripcion: err.message
+          };
+
+          if (err.name === 'NotAllowedError' || err.message?.includes('Permission denied')) {
+            errorInfo = {
+              tipo: 'permiso_denegado',
+              mensaje: 'Permiso de cámara denegado',
+              descripcion: 'Necesitamos acceso a tu cámara para escanear códigos de barras.'
+            };
+          } else if (err.name === 'NotFoundError' || err.message?.includes('Requested device not found')) {
+            errorInfo = {
+              tipo: 'sin_camara',
+              mensaje: 'No se encontró una cámara',
+              descripcion: 'Tu dispositivo no tiene cámara disponible o no está conectada.'
+            };
+          } else if (err.name === 'NotReadableError' || err.message?.includes('Could not start video source')) {
+            errorInfo = {
+              tipo: 'camara_en_uso',
+              mensaje: 'La cámara está en uso',
+              descripcion: 'Otra aplicación está usando la cámara. Ciérrala e intenta de nuevo.'
+            };
+          } else if (err.name === 'OverconstrainedError') {
+            errorInfo = {
+              tipo: 'camara_incompatible',
+              mensaje: 'Cámara no compatible',
+              descripcion: 'Tu cámara no cumple los requisitos necesarios para el scanner.'
+            };
+          }
+
+          setErrorCamara(errorInfo);
+          setError("");
           setIsScanning(false);
           setScannerReady(false);
           return;
@@ -275,6 +310,45 @@ export default function Scan() {
     }
     setIsScanning(false);
     setScannerReady(false);
+  };
+
+  // Función para solicitar permisos de cámara
+  const solicitarPermisoCamara = async () => {
+    try {
+      // Primero verificar el estado actual del permiso
+      if (navigator.permissions && navigator.permissions.query) {
+        const permissionStatus = await navigator.permissions.query({ name: 'camera' });
+
+        if (permissionStatus.state === 'denied') {
+          // El permiso fue denegado permanentemente, mostrar instrucciones
+          setErrorCamara({
+            tipo: 'permiso_bloqueado',
+            mensaje: 'Permiso de cámara bloqueado',
+            descripcion: 'El acceso a la cámara está bloqueado. Debes habilitarlo manualmente en la configuración del navegador.'
+          });
+          return;
+        }
+      }
+
+      // Intentar solicitar permiso
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      // Si llegamos aquí, el permiso fue otorgado
+      stream.getTracks().forEach(track => track.stop()); // Detener el stream temporal
+      setErrorCamara(null);
+      // Reiniciar el scanner
+      setModo("manual");
+      setTimeout(() => setModo("codigo"), 100);
+    } catch (err) {
+      console.log('Error al solicitar cámara:', err.name, err.message);
+      // Si el usuario deniega o está bloqueado
+      if (err.name === 'NotAllowedError') {
+        setErrorCamara({
+          tipo: 'permiso_bloqueado',
+          mensaje: 'Permiso de cámara bloqueado',
+          descripcion: 'El acceso a la cámara está bloqueado. Debes habilitarlo manualmente en la configuración del navegador.'
+        });
+      }
+    }
   };
 
   const buscarProductoPorCodigo = async () => {
@@ -675,16 +749,95 @@ export default function Scan() {
         {modo === "codigo" && !codigoConfirmado && (
         <div className="scanner-column">
         <div className="modo-codigo">
+              {/* Mostrar error de cámara si existe */}
+              {errorCamara ? (
+                <div className="error-camara-container">
+                  <div className="error-camara-icon">
+                    {(errorCamara.tipo === 'permiso_denegado' || errorCamara.tipo === 'permiso_bloqueado') ? '🔒' : null}
+                    {errorCamara.tipo === 'sin_camara' ? '📷' : null}
+                    {errorCamara.tipo === 'camara_en_uso' ? '⚠️' : null}
+                    {errorCamara.tipo === 'camara_incompatible' ? '❌' : null}
+                    {errorCamara.tipo === 'desconocido' ? '❓' : null}
+                  </div>
+                  <h3 className="error-camara-titulo">{errorCamara.mensaje}</h3>
+                  <p className="error-camara-descripcion">{errorCamara.descripcion}</p>
+
+                  {/* Instrucciones para permiso bloqueado */}
+                  {errorCamara.tipo === 'permiso_bloqueado' && (
+                    <div className="error-camara-instrucciones">
+                      <p className="instrucciones-titulo">Para habilitar la cámara:</p>
+                      <div className="instrucciones-pasos">
+                        <div className="paso">
+                          <span className="paso-numero">1</span>
+                          <span>Haz clic en el ícono 🔒 en la barra de direcciones</span>
+                        </div>
+                        <div className="paso">
+                          <span className="paso-numero">2</span>
+                          <span>Busca "Cámara" y selecciona "Permitir"</span>
+                        </div>
+                        <div className="paso">
+                          <span className="paso-numero">3</span>
+                          <span>Recarga la página</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="error-camara-acciones">
+                    {errorCamara.tipo === 'permiso_denegado' && (
+                      <button
+                        className="btn-solicitar-permiso"
+                        onClick={solicitarPermisoCamara}
+                      >
+                        📷 Permitir acceso a la cámara
+                      </button>
+                    )}
+
+                    {errorCamara.tipo === 'permiso_bloqueado' && (
+                      <button
+                        className="btn-reintentar-camara"
+                        onClick={() => window.location.reload()}
+                      >
+                        🔄 Recargar página
+                      </button>
+                    )}
+
+                    {(errorCamara.tipo === 'camara_en_uso' || errorCamara.tipo === 'desconocido') && (
+                      <button
+                        className="btn-reintentar-camara"
+                        onClick={() => {
+                          setErrorCamara(null);
+                          setModo("manual");
+                          setTimeout(() => setModo("codigo"), 100);
+                        }}
+                      >
+                        🔄 Reintentar
+                      </button>
+                    )}
+
+                    <button
+                      className="btn-modo-manual"
+                      onClick={() => {
+                        setErrorCamara(null);
+                        setModo("manual");
+                      }}
+                    >
+                      ✏️ Ingresar código manualmente
+                    </button>
+                  </div>
+                </div>
+              ) : (
+              <>
               <div className="scanner-container">
-                <div 
-                  ref={scannerRef} 
+                <div
+                  ref={scannerRef}
                   className="scanner-viewport"
                 />
-                
+
                 {/* Controles del scanner */}
                 <div className="scanner-controls">
                   {scannerReady && !codigoConfirmado && (
-                    <button 
+                    <button
                       className="btn-reset"
                       onClick={reiniciarScanner}
                       title="Reiniciar scanner"
@@ -692,9 +845,9 @@ export default function Scan() {
                       🔄 Reiniciar
                     </button>
                   )}
-                  
+
                   {codigoConfirmado && (
-                    <button 
+                    <button
                       className="btn-nuevo"
                       onClick={() => {
                         setCodigo("");
@@ -730,7 +883,7 @@ export default function Scan() {
               </div>
 
               <div className="scanner-feedback">
-                {!isScanning && !error && !buscandoProducto && (
+                {!isScanning && !error && !buscandoProducto && !errorCamara && (
                   <p className="loading">🔄 Iniciando scanner...</p>
                 )}
                 {isScanning && !scannerReady && (
@@ -746,8 +899,10 @@ export default function Scan() {
                     <p className="scan-complete">✨ Scanner detenido. Para escanear otro, usa "🔄 Reiniciar"</p>
                   </div>
                 )}
-          {error && modo === "codigo" && !error.includes("Producto no registrado") && <p className="error">{error}</p>}
+                {error && modo === "codigo" && !error.includes("Producto no registrado") && <p className="error">{error}</p>}
               </div>
+              </>
+              )}
             </div>
         </div>
       )}

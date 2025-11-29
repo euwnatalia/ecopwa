@@ -51,19 +51,28 @@ function Sidebar({ userDetails, onLogout }) {
 
   return (
     <>
-      <button 
-        className="mobile-menu-toggle"
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-        aria-label="Open menu"
-      >
-        {isMobileOpen ? '✕' : '☰'}
-      </button>
-      <div 
+      {!isMobileOpen && (
+        <button
+          className="mobile-menu-toggle"
+          onClick={() => setIsMobileOpen(true)}
+          aria-label="Abrir menú"
+        >
+          ☰
+        </button>
+      )}
+      <div
         className={`sidebar-overlay ${isMobileOpen ? 'active' : ''}`}
         onClick={closeMobileMenu}
       ></div>
 
       <aside className={`sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
+        <button
+          className="sidebar-close-btn"
+          onClick={closeMobileMenu}
+          aria-label="Cerrar menú"
+        >
+          ✕
+        </button>
         <h2>reciclAR <span className="sidebar-logo">{isComercio ? '🏪' : '♻️'}</span></h2>
         {isComercio && <div className="user-type-badge">Comercio</div>}
         
@@ -131,7 +140,7 @@ function Sidebar({ userDetails, onLogout }) {
               </Link>
             </li>
             <li>
-              <Link 
+              <Link
                 to="/dashboard/profile"
                 className={location.pathname === '/dashboard/profile' ? 'active' : ''}
               >
@@ -139,6 +148,17 @@ function Sidebar({ userDetails, onLogout }) {
                   <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" stroke="#fff" strokeWidth="2"/><path d="M4 20c0-4 4-7 8-7s8 3 8 7" stroke="#fff" strokeWidth="2"/></svg>
                 </span>
                 Perfil
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/dashboard/install"
+                className={location.pathname === '/dashboard/install' ? 'active' : ''}
+              >
+                <span className="sidebar-icon">
+                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17h16" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </span>
+                Descarga la app
               </Link>
             </li>
           </ul>
