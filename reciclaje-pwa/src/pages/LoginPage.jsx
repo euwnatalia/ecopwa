@@ -460,8 +460,8 @@ if (showRegistration) {
 }
 
 function RegistrationModal({ userData, onRegister, onBack, loading, error, isLoaded, preselectedType, apiKey }) {
-  // Si viene con tipo preseleccionado (comercio), ir directo al paso 2
-  const [step, setStep] = useState(preselectedType === 'comercio' ? 2 : 1);
+  // Siempre empezar en paso 1 para mostrar bienvenida
+  const [step, setStep] = useState(1);
   const [selectedType, setSelectedType] = useState(preselectedType || null);
   const [formData, setFormData] = useState({
     tiposReciclaje: [],
@@ -567,49 +567,53 @@ function RegistrationModal({ userData, onRegister, onBack, loading, error, isLoa
         {step === 1 && (
           <div className="registration-step">
             <h2>¡Bienvenido {userData.nombre}! 👋</h2>
-            <p>Parece que es tu primera vez aquí. ¿Cómo te gustaría registrarte?</p>
+            {preselectedType === 'comercio' ? (
+              <p>¡Genial que quieras sumarte como punto de reciclaje! Confirmá tu registro.</p>
+            ) : (
+              <p>Parece que es tu primera vez aquí. ¿Cómo te gustaría registrarte?</p>
+            )}
 
             {error && <div className="registration-error">{error}</div>}
 
             <div className="user-type-selection">
-              <div 
+              <div
                 className={`user-type-card ${selectedType === 'usuario' ? 'selected' : ''}`}
                 onClick={() => setSelectedType('usuario')}
               >
                 <div className="card-icon">♻️</div>
-                <h3>Soy Usuario</h3>
+                <h3>Soy Reciclador</h3>
                 <p>Quiero reciclar, acumular puntos y ganar premios</p>
                 <ul>
-                  <li>Registra tus reciclajes</li>
-                  <li>Acumula puntos</li>
-                  <li>Desbloquea logros</li>
-                  <li>Encuentra puntos cercanos</li>
+                  <li>Registrá tus reciclajes</li>
+                  <li>Acumulá puntos</li>
+                  <li>Desbloqueá logros</li>
+                  <li>Encontrá puntos cercanos</li>
                 </ul>
               </div>
 
-              <div 
+              <div
                 className={`user-type-card ${selectedType === 'comercio' ? 'selected' : ''}`}
                 onClick={() => setSelectedType('comercio')}
               >
                 <div className="card-icon">🏪</div>
-                <h3>Soy Comercio</h3>
+                <h3>Soy un Comercio</h3>
                 <p>Quiero ser un punto de reciclaje para la comunidad</p>
                 <ul>
-                  <li>Aparece en el mapa</li>
-                  <li>Recibe materiales reciclables</li>
-                  <li>Ayuda a la comunidad</li>
-                  <li>Aumenta tu visibilidad</li>
+                  <li>Aparecé en el mapa</li>
+                  <li>Recibí materiales reciclables</li>
+                  <li>Ayudá a la comunidad</li>
+                  <li>Aumentá tu visibilidad</li>
                 </ul>
               </div>
             </div>
 
             <div className="registration-actions">
-              <button 
+              <button
                 className="continue-button"
                 onClick={() => selectedType === 'usuario' ? handleSubmit() : setStep(2)}
                 disabled={!selectedType || loading}
               >
-                {loading ? 'Registrando...' : 'Continuar'}
+                {loading ? 'Registrando...' : selectedType === 'comercio' ? 'Continuar con el registro' : 'Registrarme'}
               </button>
             </div>
           </div>

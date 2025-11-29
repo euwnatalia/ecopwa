@@ -50,26 +50,30 @@ export default function Scan() {
     advertencia: false
   });
 
-  // Estado para modal de producto agregado
   const [mostrarModalProducto, setMostrarModalProducto] = useState(false);
   const [productoAgregado, setProductoAgregado] = useState(null);
+  const [mostrarAyuda, setMostrarAyuda] = useState(false);
+  const [buscandoProducto, setBuscandoProducto] = useState(false);
 
   const scannerRef = useRef(null);
   const detectionTimeoutRef = useRef(null);
 
-  // Función para manejar errores 401 automáticamente
   const handleUnauthorized = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     onLogout();
   };
 
-  // Obtener geolocalización al cargar el componente
   useEffect(() => {
     obtenerUbicacion();
+
+    const ayudaMostrada = localStorage.getItem('ayudaScannerMostrada');
+    if (!ayudaMostrada) {
+      setMostrarAyuda(true);
+      localStorage.setItem('ayudaScannerMostrada', 'true');
+    }
   }, []);
 
-  // Cargar puntos cercanos cuando tengamos la ubicación
   useEffect(() => {
     if (userLocation && tipo) {
       cargarPuntosCercanos();
@@ -168,96 +172,90 @@ export default function Scan() {
           type: "LiveStream",
           target: scannerRef.current,
           constraints: {
-            width: { ideal: 1280, min: 640 },
-            height: { ideal: 720, min: 480 },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            aspectRatio: { ideal: 16/9 },
             facingMode: "environment"
           }
         },
         decoder: {
-          readers: [
-            "ean_reader",       // EAN-13 (muy común en Argentina)
-            "ean_8_reader",     // EAN-8 
-            "code_128_reader",  // Code 128 (productos locales)
-            "upc_reader",       // UPC-A (productos importados)
-            "upc_e_reader"      // UPC-E
-          ]
+          readers: ["ean_reader", "ean_8_reader"]
         },
         locate: true,
-        frequency: 25,   // Frecuencia optimizada
+        frequency: 10,
+        numOfWorkers: 4,
         debug: false
       };
 
       Quagga.init(config, (err) => {
         if (err) {
-              setError("Error al inicializar el scanner: " + err.message);
+          setError("Error al inicializar el scanner: " + err.message);
           setIsScanning(false);
           setScannerReady(false);
           return;
         }
-        
+
         Quagga.start();
         setIsScanning(true);
         setScannerReady(true);
         setError("");
       });
 
-      // Listener para detección de códigos con validación múltiple
       Quagga.onDetected((result) => {
         const code = result.codeResult.code;
         const now = Date.now();
+        const error = result.codeResult.error;
 
-        // Si ya se confirmó un código, no procesar más
+        console.log('📷 Código detectado:', code, 'Error:', error, 'Longitud:', code?.length);
+
         if (codigoConfirmado) return;
 
-        // Throttle: solo permitir una detección cada 100ms
+        if (!code || (code.length !== 13 && code.length !== 8)) {
+          console.log('❌ Rechazado: Longitud incorrecta');
+          return;
+        }
+
+        if (error > 0.15) {
+          console.log('❌ Rechazado: Error muy alto');
+          return;
+        }
+
         if (ultimaDeteccion && now - ultimaDeteccion < 100) {
           return;
         }
 
         setUltimaDeteccion(now);
 
-        // Agregar al buffer de detecciones
         setCodigoBuffer(prev => {
-          // Limpiar detecciones antiguas (más de 1500ms)
           const filteredBuffer = prev.filter(item =>
             now - item.timestamp < 1500
           );
 
-          // Verificar si tenemos 3 detecciones del mismo código
-          const sameCodeDetections = filteredBuffer.filter(item => item.code === code);
+          const newBuffer = [...filteredBuffer, { code, timestamp: now }];
+          const sameCodeDetections = newBuffer.filter(item => item.code === code);
 
-          if (sameCodeDetections.length >= 2) {
-            // Ya tenemos 2, esta es la tercera - ¡Código confirmado!
+          if (sameCodeDetections.length >= 3) {
             setCodigoConfirmado(true);
             setTimeout(() => confirmarCodigo(code), 100);
             return [];
           }
 
-          // Agregar la nueva detección
-          const newBuffer = [...filteredBuffer, { code, timestamp: now }];
-
-          // Mantener solo las últimas 3 detecciones
-          return newBuffer.slice(-3);
+          return newBuffer.slice(-5);
         });
       });
     };
 
-    // Función para confirmar código después de 3 detecciones
     const confirmarCodigo = (code) => {
-      
-      // Parar el scanner inmediatamente
+
       stopScanner();
-      
-      // Establecer el código confirmado
+
       setCodigo(code);
       setCodigoConfirmado(true);
       setError("");
-      
-      // Limpiar el buffer
+
       setCodigoBuffer([]);
     };
 
-    // Delay para asegurar que el DOM esté listo
     const timer = setTimeout(startScanner, 200);
 
     return () => {
@@ -279,21 +277,70 @@ export default function Scan() {
     setScannerReady(false);
   };
 
-  // cada vez que cambie el código intento cargar el producto
+  const buscarProductoPorCodigo = async () => {
+    if (!codigo) {
+      alert("Ingresa un código de barras primero");
+      return;
+    }
+
+    setBuscandoProducto(true);
+    try {
+      const response = await fetch(
+        `${API_URL}/productos?codigo=${encodeURIComponent(codigo)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`
+          }
+        }
+      );
+
+      if (response.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+
+      if (response.ok) {
+        const prod = await response.json();
+        setProducto(prod);
+        setNombreProd(String(prod.nombre || ""));
+        setTipo(String(prod.tipo || ""));
+        setPesoEstimado(prod.pesoEstimado ? String(prod.pesoEstimado) : "");
+        setError("");
+      } else if (response.status === 404) {
+        setProducto(null);
+        setNombreProd("");
+        setTipo("");
+        setPesoEstimado("");
+        setError("❌ Producto no encontrado. Puedes registrarlo manualmente completando los campos.");
+      } else {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+    } catch (err) {
+      setProducto(null);
+      setNombreProd("");
+      setTipo("");
+      setPesoEstimado("");
+      setError("Error al buscar el producto. Verifica tu conexión.");
+    } finally {
+      setBuscandoProducto(false);
+    }
+  };
+
   useEffect(() => {
-    if (!codigo) return;
-    
-    const buscarProducto = async () => {
+    if (!codigo || modo !== "codigo" || !codigoConfirmado) return;
+
+    const buscarAutomatico = async () => {
+      setBuscandoProducto(true);
       try {
         const response = await fetch(
-          `${API_URL}/productos?codigo=${encodeURIComponent(codigo)}`, 
+          `${API_URL}/productos?codigo=${encodeURIComponent(codigo)}`,
           {
-            headers: { 
-              Authorization: `Bearer ${localStorage.getItem("token")}` 
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`
             }
           }
         );
-        
+
         if (response.status === 401) {
           handleUnauthorized();
           return;
@@ -307,28 +354,28 @@ export default function Scan() {
           setPesoEstimado(prod.pesoEstimado ? String(prod.pesoEstimado) : "");
           setError("");
         } else if (response.status === 404) {
-          // Producto no encontrado
           setProducto(null);
           setNombreProd("");
           setTipo("");
           setPesoEstimado("");
-          setError("Producto no registrado. Rellena los campos abajo para añadirlo.");
+          setError("❌ Producto no encontrado. Puedes registrarlo manualmente completando los campos.");
         } else {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
       } catch (err) {
-          setProducto(null);
+        setProducto(null);
         setNombreProd("");
         setTipo("");
         setPesoEstimado("");
         setError("Error al buscar el producto. Verifica tu conexión.");
+      } finally {
+        setBuscandoProducto(false);
       }
     };
 
-    buscarProducto();
-  }, [codigo]);
+    buscarAutomatico();
+  }, [codigo, codigoConfirmado, modo]);
 
-  // POST /api/productos
   const registrarProducto = async () => {
     if (!codigo || !nombreProd || !tipo || !pesoEstimado) {
       alert("Completa todos los campos para registrar.");
@@ -370,7 +417,6 @@ export default function Scan() {
     }
   };
 
-  // POST /api/reciclajes - Actualizado para incluir punto de reciclaje
   const guardarReciclaje = async () => {
     if (!tipo || !pesoEstimado) {
       alert("Debes indicar tipo y peso para guardar el reciclaje.");
@@ -409,8 +455,7 @@ export default function Scan() {
         },
         tipoCompatible: esCompatible
       };
-      
-      // Agregar ubicación del usuario si está disponible
+
       if (userLocation) {
         reciclaje.userLat = userLocation.lat;
         reciclaje.userLng = userLocation.lng;
@@ -436,7 +481,6 @@ export default function Scan() {
         throw new Error(data.error || res.statusText);
       }
 
-      // Mostrar modal de éxito
       setDatosExito({
         puntos: data.puntosObtenidos || 0,
         distancia: data.distancia || 0,
@@ -444,7 +488,6 @@ export default function Scan() {
       });
       setMostrarModalExito(true);
 
-      // limpio todo
       limpiarFormulario();
     } catch (e) {
       alert("Error al guardar reciclaje: " + e.message);
@@ -452,23 +495,32 @@ export default function Scan() {
   };
 
   const limpiarFormulario = () => {
-      setCodigo("");
-      setProducto(null);
-      setNombreProd("");
-      setTipo("");
-      setPesoEstimado("");
-      setError("");
+    setCodigo("");
+    setProducto(null);
+    setNombreProd("");
+    setTipo("");
+    setPesoEstimado("");
+    setError("");
     setPuntoSeleccionado(null);
     setPuntosReciclaje([]);
-    
-    // Limpiar estados del scanner
+
     setCodigoBuffer([]);
     setCodigoConfirmado(false);
     setUltimaDeteccion(null);
+
+    // Si estamos en modo código, reiniciar el escáner
+    if (modo === "codigo") {
+      stopScanner();
+      // Forzar reinicio del escáner cambiando temporalmente el modo
+      setTimeout(() => {
+        const tempModo = modo;
+        setModo("manual");
+        setTimeout(() => setModo(tempModo), 100);
+      }, 100);
+    }
   };
 
   const cambiarModo = (nuevoModo) => {
-    // Si estamos cambiando al modo código y ya hay un código confirmado, reiniciar scanner
     if (nuevoModo === "codigo" && (codigoConfirmado || codigo)) {
       reiniciarScanner();
       return;
@@ -495,7 +547,6 @@ export default function Scan() {
   const reiniciarScanner = () => {
     stopScanner();
 
-    // Limpiar todos los estados
     setCodigo("");
     setProducto(null);
     setNombreProd("");
@@ -507,10 +558,8 @@ export default function Scan() {
     setUltimaDeteccion(null);
     setPuntoSeleccionado(null);
 
-    // Forzar reinicio del scanner
     setTimeout(() => {
       if (modo === "codigo") {
-        // Trigger re-mount del scanner
         const tempModo = modo;
         setModo("manual");
         setTimeout(() => setModo(tempModo), 100);
@@ -518,7 +567,6 @@ export default function Scan() {
     }, 100);
   };
 
-  // Función para abrir formulario de nuevo punto
   const abrirFormularioPunto = () => {
     if (userLocation && tipo) {
       setNuevoPunto({
@@ -536,7 +584,6 @@ export default function Scan() {
     }
   };
 
-  // Función para crear punto de reciclaje
   const crearPuntoReciclaje = async () => {
     if (!nuevoPunto.nombre || !nuevoPunto.direccion) {
       alert("Por favor completa nombre y dirección del punto");
@@ -564,7 +611,6 @@ export default function Scan() {
         const puntoCreado = await response.json();
         alert(`✅ Punto de reciclaje "${puntoCreado.nombre}" creado exitosamente`);
 
-        // Cerrar formulario y recargar puntos
         setMostrarFormPunto(false);
         setNuevoPunto({ nombre: "", direccion: "", tipo: "", horarios: "", observaciones: "", lat: null, lng: null });
         cargarPuntosCercanos();
@@ -587,37 +633,45 @@ export default function Scan() {
   return (
     <div className="scan-container">
       <div className="header-section">
-        {/* Toggle scanner - ahora a la izquierda */}
-        {!codigoConfirmado && (
-          <button
-            className={`toggle-scanner ${isScanning ? 'active' : ''}`}
-            onClick={() => {
-              if (isScanning) {
-                setModo("manual");
-                stopScanner();
-              } else {
-                setModo("codigo");
-              }
-            }}
-          >
-            {isScanning ? '✏️ Registrar manual' : '📷 Escanear código'}
-          </button>
-        )}
-
         <h2>Registrar Reciclaje</h2>
+
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          {!codigoConfirmado && (
+            <button
+              className={`toggle-scanner ${isScanning ? 'active' : ''}`}
+              onClick={() => {
+                if (isScanning) {
+                  setModo("manual");
+                  stopScanner();
+                } else {
+                  setModo("codigo");
+                }
+              }}
+            >
+              {isScanning ? '✏️ Registrar manual' : '📷 Escanear código'}
+            </button>
+          )}
+
+          {modo === "codigo" && (
+            <button
+              className="btn-ayuda"
+              onClick={() => setMostrarAyuda(true)}
+              title="Ver tips de escaneo"
+            >
+              💡 Tips
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Información de ubicación - Solo mostrar si hay error */}
       {loadingLocation && (
         <div className="location-info">
           <p>📍 Obteniendo tu ubicación...</p>
         </div>
       )}
 
-      {/* Layout principal: Scanner + Formulario */}
       <div className={`main-layout ${codigoConfirmado || modo === "manual" ? 'sin-scanner' : ''}`}>
 
-        {/* Columna Izquierda: Scanner - Solo mostrar si modo es código y no está confirmado */}
         {modo === "codigo" && !codigoConfirmado && (
         <div className="scanner-column">
         <div className="modo-codigo">
@@ -659,47 +713,33 @@ export default function Scan() {
                     </button>
                   )}
                 </div>
-                
-                {/* Indicador de validación */}
+
                 {scannerReady && !codigoConfirmado && codigoBuffer.length > 0 && (
                   <div className="validation-indicator">
                     <div className="validation-dots">
                       {[1, 2, 3].map(i => (
-                        <div 
+                        <div
                           key={i}
-                          className={`dot ${codigoBuffer.length >= i ? 'active' : ''}`}
+                          className={`dot ${Math.min(codigoBuffer.length, 3) >= i ? 'active' : ''}`}
                         />
                       ))}
                     </div>
-                    <p>Validando... {codigoBuffer.length}/3</p>
+                    <p>Validando... {Math.min(codigoBuffer.length, 3)}/3</p>
                   </div>
                 )}
               </div>
-              
-              {/* Estado y feedback */}
+
               <div className="scanner-feedback">
-                {!isScanning && !error && (
+                {!isScanning && !error && !buscandoProducto && (
                   <p className="loading">🔄 Iniciando scanner...</p>
                 )}
                 {isScanning && !scannerReady && (
                   <p className="loading">📷 Preparando cámara...</p>
                 )}
-                {scannerReady && !codigo && !codigoConfirmado && (
-                  <div className="scanner-tips">
-                    <p className="instruction">📷 Apunta hacia el código de barras</p>
-                    <div className="tips">
-                      <p>💡 <strong>Tips para Argentina:</strong></p>
-                      <ul>
-                        <li>• Busca códigos <strong>EAN-13</strong> (13 dígitos)</li>
-                        <li>• Común en productos de supermercado</li>
-                        <li>• Mantén el código derecho y centrado</li>
-                        <li>• Espera 3 detecciones para confirmar</li>
-                        <li>• Buena iluminación es clave 💡</li>
-                      </ul>
-                    </div>
-                  </div>
+                {buscandoProducto && (
+                  <p className="loading">🔍 Buscando producto en base de datos...</p>
                 )}
-                {codigo && codigoConfirmado && (
+                {codigo && codigoConfirmado && !buscandoProducto && (
                   <div className="codigo-detectado">
                     <p>✅ <strong>Código confirmado:</strong></p>
                     <span className="codigo-text">{codigo}</span>
@@ -712,7 +752,6 @@ export default function Scan() {
         </div>
       )}
 
-        {/* Columna Derecha: Formulario */}
         <div className="form-column">
       <div className="registro-producto">
             {codigoConfirmado && modo === "codigo" && (
@@ -728,18 +767,39 @@ export default function Scan() {
               </div>
             )}
 
-            <h3>{producto ? "Producto encontrado" : "Datos del producto"}</h3>
+            {buscandoProducto ? (
+              <div className="buscando-producto">
+                <div className="spinner"></div>
+                <h3>🔍 Buscando producto...</h3>
+                <p>Consultando base de datos</p>
+              </div>
+            ) : (
+              <>
+                <h3>{producto ? "Producto encontrado" : "Datos del producto"}</h3>
 
         {modo === "manual" && (
-          <label>
-            Código (opcional):
-            <input
-              type="text"
-              value={codigo}
-              onChange={e => setCodigo(e.target.value)}
-                  placeholder="Opcional - Solo si tiene código"
-            />
-          </label>
+          <>
+            <label>
+              Código (opcional):
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="text"
+                  value={codigo}
+                  onChange={e => setCodigo(e.target.value)}
+                  placeholder="Ej: 7790310083703"
+                  style={{ flex: 1 }}
+                />
+                <button
+                  className="btn-buscar-codigo"
+                  onClick={buscarProductoPorCodigo}
+                  disabled={!codigo || buscandoProducto}
+                  type="button"
+                >
+                  {buscandoProducto ? '🔍...' : '🔍 Buscar'}
+                </button>
+              </div>
+            </label>
+          </>
         )}
 
         <label>
@@ -818,8 +878,7 @@ export default function Scan() {
                         Verifica que acepten tu material antes de ir.
                       </div>
                     )}
-                    
-                    {/* Info del punto seleccionado */}
+
                     {puntoSeleccionado && (
                       <div className="info-punto-seleccionado">
                         <h4>📍 {String(puntoSeleccionado.nombre)}</h4>
@@ -890,11 +949,12 @@ export default function Scan() {
                 </button>
               )}
             </div>
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Modal para crear punto de reciclaje */}
       {mostrarFormPunto && (
         <div className="modal-overlay" onClick={() => setMostrarFormPunto(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -1008,7 +1068,6 @@ export default function Scan() {
         </div>
       )}
 
-      {/* Modal de éxito */}
       {mostrarModalExito && (
         <div className="modal-overlay" onClick={() => setMostrarModalExito(false)}>
           <div className="modal-exito" onClick={e => e.stopPropagation()}>
@@ -1060,7 +1119,47 @@ export default function Scan() {
         </div>
       )}
 
-      {/* Modal de producto agregado */}
+      {mostrarAyuda && (
+        <div className="modal-overlay" onClick={() => setMostrarAyuda(false)}>
+          <div className="modal-ayuda" onClick={e => e.stopPropagation()}>
+            <button
+              className="modal-close"
+              onClick={() => setMostrarAyuda(false)}
+              type="button"
+            >
+              ✕
+            </button>
+
+            <div className="ayuda-header">
+              <div className="ayuda-icon">📷</div>
+              <h3>Apunta hacia el código de barras</h3>
+            </div>
+
+            <div className="ayuda-content">
+              <div className="ayuda-section">
+                <p className="ayuda-titulo">💡 <strong>Tips para Argentina:</strong></p>
+                <ul className="ayuda-lista">
+                  <li>• Busca códigos <strong>EAN-13</strong> (13 dígitos) o <strong>EAN-8</strong> (8 dígitos)</li>
+                  <li>• Común en productos de supermercado</li>
+                  <li>• Mantén el código derecho y centrado</li>
+                  <li>• Espera 3 detecciones para confirmar</li>
+                  <li>• Buena iluminación es clave 💡</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="ayuda-actions">
+              <button
+                className="btn-ayuda-cerrar"
+                onClick={() => setMostrarAyuda(false)}
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {mostrarModalProducto && productoAgregado && (
         <div className="modal-overlay" onClick={() => setMostrarModalProducto(false)}>
           <div className="modal-producto" onClick={e => e.stopPropagation()}>

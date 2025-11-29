@@ -99,117 +99,111 @@ export default function PuntoForm({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="punto-form">
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="nombre">
-                Nombre del Punto <span className="required">*</span>
-              </label>
-              <input
-                id="nombre"
-                type="text"
-                value={formData.nombre}
-                onChange={(e) => handleInputChange('nombre', e.target.value)}
-                placeholder="ej. Centro de Reciclaje Municipal"
-                className={errors.nombre ? 'error' : ''}
-                disabled={isLoading}
-                maxLength={50}
-              />
-              {errors.nombre && <span className="error-text">{errors.nombre}</span>}
+        <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0}}>
+          <div className="punto-form">
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="nombre">
+                  Nombre del Punto <span className="required">*</span>
+                </label>
+                <input
+                  id="nombre"
+                  type="text"
+                  value={formData.nombre}
+                  onChange={(e) => handleInputChange('nombre', e.target.value)}
+                  placeholder="ej. Centro de Reciclaje Municipal"
+                  className={errors.nombre ? 'error' : ''}
+                  disabled={isLoading}
+                  maxLength={50}
+                />
+                {errors.nombre && <span className="error-text">{errors.nombre}</span>}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="direccion">
+                  Dirección <span className="required">*</span>
+                </label>
+                <input
+                  id="direccion"
+                  type="text"
+                  value={formData.direccion}
+                  onChange={(e) => handleInputChange('direccion', e.target.value)}
+                  placeholder="ej. Av. Colón 123, Córdoba"
+                  className={errors.direccion ? 'error' : ''}
+                  disabled={isLoading}
+                  maxLength={100}
+                />
+                {errors.direccion && <span className="error-text">{errors.direccion}</span>}
+              </div>
             </div>
 
             <div className="form-group">
-              <label htmlFor="direccion">
-                Dirección <span className="required">*</span>
+              <label>
+                Tipos de Materiales <span className="required">*</span>
               </label>
-              <input
-                id="direccion"
-                type="text"
-                value={formData.direccion}
-                onChange={(e) => handleInputChange('direccion', e.target.value)}
-                placeholder="ej. Av. Colón 123, Córdoba"
-                className={errors.direccion ? 'error' : ''}
-                disabled={isLoading}
-                maxLength={100}
-              />
-              {errors.direccion && <span className="error-text">{errors.direccion}</span>}
+              <div className="materials-grid">
+                {MATERIALES.map(material => (
+                  <div
+                    key={material.value}
+                    className={`material-option ${formData.tipos.includes(material.value) ? 'selected' : ''}`}
+                    onClick={() => !isLoading && handleMaterialToggle(material.value)}
+                    style={{
+                      borderColor: formData.tipos.includes(material.value) ? material.color : '#e0e0e0',
+                      backgroundColor: formData.tipos.includes(material.value) ? `${material.color}15` : 'white'
+                    }}
+                  >
+                    <span className="material-icon">{material.icon}</span>
+                    <span className="material-label">{material.label}</span>
+                    {formData.tipos.includes(material.value) && (
+                      <span className="check-icon">✓</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {errors.tipos && <span className="error-text">{errors.tipos}</span>}
             </div>
-          </div>
 
-          <div className="form-group">
-            <label>
-              Tipos de Materiales <span className="required">*</span>
-            </label>
-            <div className="materials-grid">
-              {MATERIALES.map(material => (
-                <div
-                  key={material.value}
-                  className={`material-option ${formData.tipos.includes(material.value) ? 'selected' : ''}`}
-                  onClick={() => !isLoading && handleMaterialToggle(material.value)}
-                  style={{
-                    borderColor: formData.tipos.includes(material.value) ? material.color : '#e0e0e0',
-                    backgroundColor: formData.tipos.includes(material.value) ? `${material.color}15` : 'white'
-                  }}
-                >
-                  <span className="material-icon">{material.icon}</span>
-                  <span className="material-label">{material.label}</span>
-                  {formData.tipos.includes(material.value) && (
-                    <span className="check-icon">✓</span>
-                  )}
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="horarios">
+                  Horarios <span className="optional">(opcional)</span>
+                </label>
+                <input
+                  id="horarios"
+                  type="text"
+                  value={formData.horarios}
+                  onChange={(e) => handleInputChange('horarios', e.target.value)}
+                  placeholder="ej. Lun-Vie 8:00-17:00"
+                  className={errors.horarios ? 'error' : ''}
+                  disabled={isLoading}
+                  maxLength={100}
+                />
+                {errors.horarios && <span className="error-text">{errors.horarios}</span>}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="observaciones">
+                  Observaciones <span className="optional">(opcional)</span>
+                </label>
+                <textarea
+                  id="observaciones"
+                  value={formData.observaciones}
+                  onChange={(e) => handleInputChange('observaciones', e.target.value)}
+                  placeholder="Información adicional, requisitos especiales, etc."
+                  className={errors.observaciones ? 'error' : ''}
+                  disabled={isLoading}
+                  maxLength={200}
+                  rows={2}
+                />
+                <div className="char-count">
+                  {formData.observaciones.length}/200
                 </div>
-              ))}
+                {errors.observaciones && <span className="error-text">{errors.observaciones}</span>}
+              </div>
             </div>
-            {errors.tipos && <span className="error-text">{errors.tipos}</span>}
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="horarios">
-                Horarios <span className="optional">(opcional)</span>
-              </label>
-              <input
-                id="horarios"
-                type="text"
-                value={formData.horarios}
-                onChange={(e) => handleInputChange('horarios', e.target.value)}
-                placeholder="ej. Lun-Vie 8:00-17:00"
-                className={errors.horarios ? 'error' : ''}
-                disabled={isLoading}
-                maxLength={100}
-              />
-              {errors.horarios && <span className="error-text">{errors.horarios}</span>}
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="observaciones">
-              Observaciones <span className="optional">(opcional)</span>
-            </label>
-            <textarea
-              id="observaciones"
-              value={formData.observaciones}
-              onChange={(e) => handleInputChange('observaciones', e.target.value)}
-              placeholder="Información adicional, requisitos especiales, etc."
-              className={errors.observaciones ? 'error' : ''}
-              disabled={isLoading}
-              maxLength={200}
-              rows={2}
-            />
-            <div className="char-count">
-              {formData.observaciones.length}/200
-            </div>
-            {errors.observaciones && <span className="error-text">{errors.observaciones}</span>}
           </div>
 
           <div className="form-actions">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="btn-secondary"
-              disabled={isLoading}
-            >
-              Cancelar
-            </button>
             <button
               type="submit"
               className="btn-primary"

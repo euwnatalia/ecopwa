@@ -48,29 +48,29 @@
 
 /* Reducir tamaño del InfoWindow de puntos en el mapa */
 .info-window {
-  max-width: 320px !important;
+  max-width: 300px !important;
   min-width: 280px !important;
-  padding: 0.75rem !important;
+  padding: 0.5rem !important;
 }
 
 .info-window h4 {
   font-size: 0.95rem !important;
-  margin-bottom: 0.5rem !important;
-  padding-bottom: 0.25rem !important;
+  margin-bottom: 0.4rem !important;
+  padding-bottom: 0.3rem !important;
 }
 
 .info-details p {
   font-size: 0.8rem !important;
-  margin: 0.25rem 0 !important;
+  margin: 0.2rem 0 !important;
 }
 
 .materiales-info {
-  margin: 0.25rem 0 !important;
+  margin: 0.2rem 0 !important;
 }
 
 .materiales-info strong {
   font-size: 0.8rem !important;
-  margin-bottom: 0.25rem !important;
+  margin-bottom: 0.2rem !important;
 }
 
 .material-tag {
@@ -79,7 +79,7 @@
 }
 
 .punto-status {
-  margin: 0.5rem 0 !important;
+  margin: 0.4rem 0 !important;
   gap: 0.25rem !important;
 }
 
@@ -94,13 +94,13 @@
 }
 
 .punto-stats {
-  padding: 0.5rem !important;
-  margin: 0.5rem 0 !important;
+  padding: 0.4rem !important;
+  margin: 0.4rem 0 !important;
   font-size: 0.8rem !important;
 }
 
 .punto-actions {
-  margin-top: 0.75rem !important;
+  margin-top: 0.6rem !important;
   gap: 0.25rem !important;
 }
 
@@ -284,37 +284,42 @@
   }
 }
 
-/* Botón de cierre del popup de Leaflet más pequeño */
+/* Ocultar botón de cierre del popup de Leaflet */
 .leaflet-popup-close-button,
 a.leaflet-popup-close-button {
-  width: 18px !important;
-  height: 18px !important;
-  font-size: 14px !important;
-  line-height: 16px !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  top: 3px !important;
-  right: 3px !important;
-  color: #666 !important;
-  font-weight: normal !important;
-  text-align: center !important;
-  border: none !important;
-  background: transparent !important;
+  display: none !important;
 }
 
-.leaflet-popup-close-button:hover,
-a.leaflet-popup-close-button:hover {
-  color: #333 !important;
-  background: rgba(0, 0, 0, 0.08) !important;
-  border-radius: 2px !important;
-}
-
-/* Hacer el contenido del popup más compacto también */
-.leaflet-popup-content-wrapper {
+/* Estilos para Google Maps InfoWindow */
+.gm-style-iw-c {
+  padding: 0.5rem 0.6rem 0.6rem 0.6rem !important;
   border-radius: 8px !important;
+  max-width: 320px !important;
 }
 
-.leaflet-popup-content {
-  margin: 8px 10px !important;
-  font-size: 13px !important;
+.gm-style-iw-d {
+  overflow: auto !important;
+  max-height: none !important;
+}
+
+/* Reducir tamaño de la X de cierre */
+.gm-style .gm-style-iw-c > button.gm-ui-hover-effect {
+  width: 20px !important;
+  height: 20px !important;
+  top: 5px !important;
+  right: 5px !important;
+}
+
+.gm-style .gm-style-iw-c > button.gm-ui-hover-effect img {
+  width: 11px !important;
+  height: 11px !important;
+}
+
+/* Ajustar título del InfoWindow para alinearlo con la X */
+.info-window h4 {
+  font-size: 0.95rem !important;
+  margin: 0 0 0.4rem 0 !important;
+  padding: 0 1.3rem 0.3rem 0 !important;
+  border-bottom: 1px solid #e0e0e0 !important;
+  line-height: 1.2 !important;
 }

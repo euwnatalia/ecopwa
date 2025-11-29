@@ -404,13 +404,6 @@ function Profile() {
 
   return (
     <div className="profile-container">
-      <div className="profile-header">
-        <h1>{isCommerce ? 'Perfil del Comercio' : 'Mi Perfil Eco'}</h1>
-        <p className="profile-subtitle">
-          {isCommerce ? 'Centro de reciclaje registrado' : 'Tu impacto ambiental cuenta'}
-        </p>
-      </div>
-
       {/* Tarjeta principal del usuario */}
       <div className="profile-card">
         <div className="profile-avatar-section">
@@ -423,7 +416,7 @@ function Profile() {
                 onError={handleAvatarError}
               />
             ) : (
-              <div 
+              <div
                 className="profile-avatar-fallback"
                 style={{ backgroundColor: avatarBgColor }}
               >
@@ -435,12 +428,17 @@ function Profile() {
             </div>
           </div>
         </div>
-        
+
         <div className="profile-info">
           {!isEditing ? (
             <>
               <div className="profile-header-actions">
-                <h2>{user.displayName || 'Usuario Eco'}</h2>
+                <div className="profile-title-section">
+                  <h2>{isCommerce ? 'Perfil del Comercio' : 'Mi Perfil Eco'}</h2>
+                  <p className="profile-subtitle-inline">
+                    {isCommerce ? 'Centro de reciclaje registrado' : 'Tu impacto ambiental cuenta'}
+                  </p>
+                </div>
                 <button
                   className="edit-profile-btn"
                   onClick={() => setIsEditing(true)}
@@ -449,12 +447,10 @@ function Profile() {
                   ✏️
                 </button>
               </div>
+              <p><span className="label">{isCommerce ? 'Nombre del comercio:' : 'Nombre:'}</span> {isCommerce ? (userDetails?.nombre || 'Sin nombre') : (user.displayName || 'Usuario Eco')}</p>
               <p><span className="label">Email:</span> {user.email}</p>
               <p><span className="label">{isCommerce ? 'Comercio desde:' : 'Miembro desde:'}</span> {new Date(user.metadata.creationTime).toLocaleDateString('es-AR', { year: 'numeric', month: 'long' })}</p>
               <p><span className="label">{isCommerce ? 'Material más recibido:' : 'Material favorito:'}</span> {mostRecycledType}</p>
-              {isCommerce && userDetails?.nombre && (
-                <p><span className="label">Nombre del comercio:</span> {userDetails.nombre}</p>
-              )}
               {isCommerce && userDetails?.direccion && (
                 <p><span className="label">Dirección:</span> {userDetails.direccion}</p>
               )}
@@ -491,7 +487,7 @@ function Profile() {
               </div>
             </div>
           )}
-          
+
           {!isCommerce && (
             <div className="profile-level-progress">
               <div className="progress-info">

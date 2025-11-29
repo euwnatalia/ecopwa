@@ -1,5 +1,5 @@
 .profile-container {
-  padding: 1.5rem 2rem;
+  padding: 1rem 1.5rem;
   font-family: 'Roboto', sans-serif;
   max-width: 1200px;
   margin: 0 auto;
@@ -10,13 +10,13 @@
 /* Profile Header - Más compacto */
 .profile-header {
   text-align: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.75rem;
 }
 
 .profile-container h1 {
   color: #2E7D32;
-  margin-bottom: 0.35rem;
-  font-size: 1.8rem;
+  margin-bottom: 0.25rem;
+  font-size: 1.4rem;
   font-weight: 700;
   background: linear-gradient(135deg, #2E7D32, #4CAF50);
   -webkit-background-clip: text;
@@ -26,20 +26,20 @@
 
 .profile-subtitle {
   color: #666;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   margin: 0;
   font-style: italic;
 }
 
 .profile-card {
   display: flex;
-  gap: 2rem;
+  gap: 1.5rem;
   background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  padding: 2rem;
+  padding: 1.25rem;
   border-radius: 20px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
   transition: all 0.3s ease;
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
@@ -615,6 +615,29 @@
   align-items: center;
   gap: 1rem;
   justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.profile-title-section {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.profile-title-section h2 {
+  margin: 0;
+  color: #2E7D32;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.profile-subtitle-inline {
+  margin: 0;
+  color: #666;
+  font-size: 0.85rem;
+  font-style: italic;
+  line-height: 1;
 }
 
 .edit-profile-btn {
@@ -627,6 +650,7 @@
   transition: all 0.3s ease;
   background: rgba(46, 125, 50, 0.1);
   color: #2E7D32;
+  flex-shrink: 0;
 }
 
 .edit-profile-btn:hover {

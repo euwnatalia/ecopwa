@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/dashboard/Dashboard";
@@ -17,6 +17,7 @@ import "./styles/space-optimization.css";
 
 function AppContent() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
@@ -24,6 +25,11 @@ function AppContent() {
   const [userDetails, setUserDetails] = useState(null);
   const [isValidating, setIsValidating] = useState(false);
   const [tokenValid, setTokenValid] = useState(null);
+
+  // Scroll al inicio en cada cambio de ruta
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (user) {

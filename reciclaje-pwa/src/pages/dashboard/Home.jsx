@@ -420,14 +420,6 @@ function Home({ userDetails: propsUserDetails }) {
             })}
           </p>
         </div>
-        <button
-          className={`refresh-btn ${refreshing ? 'spinning' : ''}`}
-          onClick={handleRefreshData}
-          disabled={refreshing}
-          title="Actualizar datos"
-        >
-          🔄
-        </button>
       </div>
 
       {/* Estadísticas principales */}
