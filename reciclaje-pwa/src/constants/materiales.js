@@ -6,7 +6,8 @@ export const MATERIALES = [
   { value: "Metal", label: "🥫 Metal", color: "#607D8B", icon: "🥫" },
   { value: "Electrónicos", label: "📱 Electrónicos", color: "#E91E63", icon: "📱" },
   { value: "Orgánico", label: "🍃 Orgánico", color: "#8BC34A", icon: "🍃" },
-  { value: "Textil", label: "👕 Textil", color: "#795548", icon: "👕" }
+  { value: "Textil", label: "👕 Textil", color: "#795548", icon: "👕" },
+  { value: "Aceite", label: "🛢️ Aceite", color: "#FFD700", icon: "🛢️" }
 ];
 
 export const getMaterialByValue = (value) => {

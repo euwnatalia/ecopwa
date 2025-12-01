@@ -153,10 +153,7 @@ export default function PuntoForm({
                     }}
                   >
                     <span className="material-icon">{material.icon}</span>
-                    <span className="material-label">{material.label}</span>
-                    {formData.tipos.includes(material.value) && (
-                      <span className="check-icon">✓</span>
-                    )}
+                    <span className="material-label">{material.label.split(' ').slice(1).join(' ') || material.label}</span>
                   </div>
                 ))}
               </div>
