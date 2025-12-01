@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useOutletContext } from "react-router-dom";
 import Quagga from "@ericblade/quagga2";
 import API_URL from "../../config/api.js";
+import { MATERIALES } from "../../constants/materiales.js";
 import "./Scan.css"; // Usamos los mismos estilos de Scan
 
 export default function ComercioReceive() {
@@ -615,11 +616,11 @@ export default function ComercioReceive() {
                     disabled={producto !== null}
                   >
                     <option value="">– Selecciona el tipo –</option>
-                    <option value="Plástico">Plástico</option>
-                    <option value="Vidrio">Vidrio</option>
-                    <option value="Cartón">Cartón</option>
-                    <option value="Papel">Papel</option>
-                    <option value="Metal">Metal</option>
+                    {MATERIALES.map(m => (
+                      <option key={m.value} value={m.value}>
+                        {m.value}
+                      </option>
+                    ))}
                   </select>
                 </label>
 

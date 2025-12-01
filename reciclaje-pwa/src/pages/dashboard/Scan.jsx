@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useOutletContext } from "react-router-dom";
 import Quagga from "@ericblade/quagga2";
 import API_URL from "../../config/api.js";
+import { MATERIALES } from "../../constants/materiales.js";
 import "./Scan.css";
 
 export default function Scan() {
@@ -134,9 +135,13 @@ export default function Scan() {
         setPuntosReciclaje(puntos);
 
         if (puntos.length > 0 && userLocation) {
-          const puntoCompatible = puntos.find(punto =>
-            punto.tipo && tipo && punto.tipo.toLowerCase() === tipo.toLowerCase()
-          );
+          const puntoCompatible = puntos.find(punto => {
+            const tiposDisponibles = Array.isArray(punto.tipos) 
+              ? punto.tipos 
+              : (punto.tipo ? [punto.tipo] : []);
+            
+            return tiposDisponibles.some(t => t && tipo && t.toLowerCase() === tipo.toLowerCase());
+          });
 
           if (puntoCompatible) {
             setPuntoSeleccionado(puntoCompatible);
@@ -502,12 +507,16 @@ export default function Scan() {
       return;
     }
 
-    const esCompatible = puntoSeleccionado.tipo && tipo && puntoSeleccionado.tipo.toLowerCase() === tipo.toLowerCase();
+    const tiposDisponibles = Array.isArray(puntoSeleccionado.tipos) 
+      ? puntoSeleccionado.tipos 
+      : (puntoSeleccionado.tipo ? [puntoSeleccionado.tipo] : []);
+    
+    const esCompatible = tiposDisponibles.some(t => t && tipo && t.toLowerCase() === tipo.toLowerCase());
 
     if (!esCompatible) {
       const confirmar = confirm(
         `⚠️ ADVERTENCIA:\n\n` +
-        `El punto "${puntoSeleccionado.nombre}" acepta ${puntoSeleccionado.tipo}, ` +
+        `El punto "${puntoSeleccionado.nombre}" acepta ${tiposDisponibles.join(', ')}, ` +
         `pero estás registrando ${tipo}.\n\n` +
         `¿Estás seguro de que este punto acepta tu material?\n\n` +
         `Presiona OK para continuar o Cancelar para elegir otro punto.`
@@ -976,11 +985,11 @@ export default function Scan() {
                 disabled={producto !== null}
               >
                 <option value="">– Selecciona el tipo –</option>
-                <option value="Plástico">Plástico</option>
-                <option value="Vidrio">Vidrio</option>
-                <option value="Cartón">Cartón</option>
-                <option value="Papel">Papel</option>
-                <option value="Metal">Metal</option>
+                {MATERIALES.map(m => (
+                  <option key={m.value} value={m.value}>
+                    {m.value}
+                  </option>
+                ))}
           </select>
         </label>
 
@@ -1013,8 +1022,13 @@ export default function Scan() {
                     >
                       <option value="">– Selecciona un punto –</option>
                       {puntosReciclaje.map(punto => {
-                        const puntoTipo = punto.tipo || 'Sin especificar';
-                        const esCompatible = punto.tipo && tipo && punto.tipo.toLowerCase() === tipo.toLowerCase();
+                        // Determinar tipos disponibles (soporte para array o string único)
+                        const tiposDisponibles = Array.isArray(punto.tipos) ? punto.tipos : (punto.tipo ? [punto.tipo] : []);
+                        const puntoTipo = tiposDisponibles.join(', ') || 'Sin especificar';
+                        
+                        // Verificar compatibilidad
+                        const esCompatible = tiposDisponibles.some(t => t && tipo && t.toLowerCase() === tipo.toLowerCase());
+                        
                         const distanciaTexto = punto.distancia ? ` (${formatDistancia(punto.distancia)})` : '';
                         const tipoIndicador = esCompatible ? '✅' : '⚠️';
 
@@ -1026,18 +1040,36 @@ export default function Scan() {
                       })}
                     </select>
 
-                    {puntoSeleccionado && puntoSeleccionado.tipo && tipo && puntoSeleccionado.tipo.toLowerCase() !== tipo.toLowerCase() && (
-                      <div className="warning-compatibilidad">
-                        ⚠️ <strong>Advertencia:</strong> Este punto acepta <strong>{puntoSeleccionado.tipo}</strong>,
-                        pero seleccionaste <strong>{tipo}</strong>.
-                        Verifica que acepten tu material antes de ir.
-                      </div>
+                    {puntoSeleccionado && (
+                      // Lógica de compatibilidad para el warning
+                      (() => {
+                        const tiposDisponibles = Array.isArray(puntoSeleccionado.tipos) 
+                          ? puntoSeleccionado.tipos 
+                          : (puntoSeleccionado.tipo ? [puntoSeleccionado.tipo] : []);
+                        
+                        const esCompatible = tiposDisponibles.some(t => t && tipo && t.toLowerCase() === tipo.toLowerCase());
+
+                        if (!esCompatible && tipo) {
+                          return (
+                            <div className="warning-compatibilidad">
+                              ⚠️ <strong>Advertencia:</strong> Este punto acepta <strong>{tiposDisponibles.join(', ')}</strong>,
+                              pero seleccionaste <strong>{tipo}</strong>.
+                              Verifica que acepten tu material antes de ir.
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()
                     )}
 
                     {puntoSeleccionado && (
                       <div className="info-punto-seleccionado">
                         <h4>📍 {String(puntoSeleccionado.nombre)}</h4>
-                        <p><strong>Tipo:</strong> {String(puntoSeleccionado.tipo)}</p>
+                        <p><strong>Tipo:</strong> {
+                          Array.isArray(puntoSeleccionado.tipos) 
+                            ? puntoSeleccionado.tipos.join(', ') 
+                            : String(puntoSeleccionado.tipo)
+                        }</p>
                         {puntoSeleccionado.direccion && (
                           <p><strong>Dirección:</strong> {String(puntoSeleccionado.direccion)}</p>
                         )}
@@ -1156,29 +1188,16 @@ export default function Scan() {
                 <label>
                   Tipos de Materiales <span className="required">*</span>
                   <div className="material-types-grid">
-                    {['Plástico', 'Vidrio', 'Cartón', 'Papel', 'Metal', 'Electrónicos', 'Orgánico', 'Textil'].map(material => {
-                      const emojis = {
-                        'Plástico': '🧴',
-                        'Vidrio': '🍾',
-                        'Cartón': '📦',
-                        'Papel': '📄',
-                        'Metal': '🥫',
-                        'Electrónicos': '💻',
-                        'Orgánico': '🌿',
-                        'Textil': '👕'
-                      };
-
-                      return (
+                    {MATERIALES.map(material => (
                         <div
-                          key={material}
-                          className={`material-type-option ${nuevoPunto.tipo === material ? 'selected' : ''}`}
-                          onClick={() => setNuevoPunto({...nuevoPunto, tipo: material})}
+                          key={material.value}
+                          className={`material-type-option ${nuevoPunto.tipo === material.value ? 'selected' : ''}`}
+                          onClick={() => setNuevoPunto({...nuevoPunto, tipo: material.value})}
                         >
-                          <span className="material-icon">{emojis[material]}</span>
-                          <span className="material-label">{material}</span>
+                          <span className="material-icon">{material.icon}</span>
+                          <span className="material-label">{material.value}</span>
                         </div>
-                      );
-                    })}
+                      ))}
                   </div>
                 </label>
               </div>

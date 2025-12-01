@@ -3,6 +3,7 @@ import { signInWithPopup } from "firebase/auth";
 import { useState, useEffect } from "react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
 import API_URL from "../config/api.js";
+import { MATERIALES } from "../constants/materiales.js";
 import "./LoginPage.css";
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -26,15 +27,9 @@ function LoginPage({ setUser }) {
     googleMapsApiKey: API_KEY
   });
 
-  const tiposDisponibles = [
-    { value: "Plástico", label: "🥤 Plástico", color: "#2196F3" },
-    { value: "Vidrio", label: "🫙 Vidrio", color: "#4CAF50" },
-    { value: "Cartón", label: "📦 Cartón", color: "#FF9800" },
-    { value: "Papel", label: "📄 Papel", color: "#9C27B0" },
-    { value: "Metal", label: "🥫 Metal", color: "#607D8B" }
-  ];
+  const tiposDisponibles = MATERIALES;
 
-// Seleccionar tipo de usuario y hacer login directamente
+  // Seleccionar tipo de usuario y hacer login directamente
 const handleSelectUserType = async (tipo) => {
   setSelectedUserType(tipo);
   setLoading(true);
@@ -410,18 +405,23 @@ if (showRegistration) {
                 }}
               >
                 {puntos.map(punto => {
-                  const tipo = tiposDisponibles.find(t => t.value === punto.tipo);
+                  const tiposPunto = Array.isArray(punto.tipos) ? punto.tipos : (punto.tipo ? [punto.tipo] : []);
+                  const primerTipo = tiposPunto[0];
+                  const materialInfo = tiposDisponibles.find(t => t.value === primerTipo);
+                  const isMultiple = tiposPunto.length > 1;
+                  
                   return (
                     <Marker
                       key={punto.id}
                       position={{ lat: punto.lat, lng: punto.lng }}
-                      title={`${punto.nombre} (${punto.tipo})`}
+                      title={`${punto.nombre} (${tiposPunto.join(', ')})`}
                       onClick={() => setSelectedPunto(punto)}
                       icon={{
                         url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
                           `<svg width="30" height="30" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="15" cy="15" r="12" fill="${tipo?.color || '#666'}" stroke="white" stroke-width="2"/>
-                            <text x="15" y="20" text-anchor="middle" font-size="12" fill="white">📍</text>
+                            <circle cx="15" cy="15" r="12" fill="${materialInfo?.color || '#666'}" stroke="white" stroke-width="2"/>
+                            <text x="15" y="20" text-anchor="middle" font-size="12" fill="white">${materialInfo?.icon || '📍'}</text>
+                            ${isMultiple ? '<circle cx="24" cy="6" r="4" fill="#FF9800" stroke="white" stroke-width="1"/>' : ''}
                           </svg>`
                         )}`,
                         scaledSize: new window.google.maps.Size(30, 30),
@@ -438,7 +438,11 @@ if (showRegistration) {
                   >
                     <div className="info-window-login">
                       <h4>{selectedPunto.nombre}</h4>
-                      <p><strong>Material:</strong> {selectedPunto.tipo}</p>
+                      <p><strong>Materiales:</strong> {
+                        Array.isArray(selectedPunto.tipos) 
+                          ? selectedPunto.tipos.join(', ') 
+                          : selectedPunto.tipo
+                      }</p>
                       {selectedPunto.direccion && (
                         <p><strong>Dirección:</strong> {selectedPunto.direccion}</p>
                       )}
@@ -460,8 +464,8 @@ if (showRegistration) {
 }
 
 function RegistrationModal({ userData, onRegister, onBack, loading, error, isLoaded, preselectedType, apiKey }) {
-  // Siempre empezar en paso 1 para mostrar bienvenida
-  const [step, setStep] = useState(1);
+  // Si ya preseleccionó comercio, saltar directo al paso 2 (configuración)
+  const [step, setStep] = useState(preselectedType === 'comercio' ? 2 : 1);
   const [selectedType, setSelectedType] = useState(preselectedType || null);
   const [formData, setFormData] = useState({
     tiposReciclaje: [],
@@ -470,13 +474,7 @@ function RegistrationModal({ userData, onRegister, onBack, loading, error, isLoa
     telefono: '',
     horarios: ''
   });
-  const tiposReciclaje = [
-    { value: "Plástico", label: "🥤 Plástico", color: "#2196F3" },
-    { value: "Vidrio", label: "🫙 Vidrio", color: "#4CAF50" },
-    { value: "Cartón", label: "📦 Cartón", color: "#FF9800" },
-    { value: "Papel", label: "📄 Papel", color: "#9C27B0" },
-    { value: "Metal", label: "🥫 Metal", color: "#607D8B" }
-  ];
+  const tiposReciclaje = MATERIALES;
 
   const handleDireccionBlur = async () => {
     if (formData.direccion && !formData.ubicacion && isLoaded) {
