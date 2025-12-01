@@ -4,49 +4,15 @@ import "./Sidebar.css";
 
 function Sidebar({ userDetails, onLogout }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [canInstall, setCanInstall] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
     setIsMobileOpen(false);
   }, [location]);
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault();
-      setCanInstall(true);
-      window.deferredPrompt = e;
-    };
-
-    const handleAppInstalled = () => {
-      setCanInstall(false);
-      window.deferredPrompt = null;
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
-      setCanInstall(false);
-    }
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
-  }, []);
 
   const closeMobileMenu = () => {
     setIsMobileOpen(false);
   };
-  const installPWA = async () => {
-    if (window.deferredPrompt) {
-      window.deferredPrompt.prompt();
-      const { outcome } = await window.deferredPrompt.userChoice;
-      window.deferredPrompt = null;
-      setCanInstall(false);
-    }
-  };
-
   const isComercio = userDetails?.tipo === 'comercio';
 
   return (
@@ -176,20 +142,6 @@ function Sidebar({ userDetails, onLogout }) {
             Cerrar sesión
           </button>
         </div>
-        {canInstall && (
-          <div className="pwa-install">
-            <button 
-              className="install-btn"
-              onClick={installPWA}
-              title="Instalar app"
-            >
-              <span className="sidebar-icon">
-                <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17h16" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </span>
-              Instalar App
-            </button>
-          </div>
-        )}
       </aside>
     </>
   );

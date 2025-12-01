@@ -32,6 +32,20 @@ function AppContent() {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
+  // Manejo de instalación PWA global
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      window.deferredPrompt = e;
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
   useEffect(() => {
     if (user) {
       localStorage.setItem('user', JSON.stringify(user));

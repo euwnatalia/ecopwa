@@ -1,8 +1,47 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./InstallApp.css";
 
 function InstallApp() {
   const [activeTab, setActiveTab] = useState("pc");
+  const [canInstall, setCanInstall] = useState(false);
+
+  useEffect(() => {
+    // Verificar si ya hay un evento guardado
+    if (window.deferredPrompt) {
+      setCanInstall(true);
+    }
+
+    // Escuchar el evento por si ocurre mientras estamos en esta página
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      window.deferredPrompt = e;
+      setCanInstall(true);
+    };
+
+    const handleAppInstalled = () => {
+      setCanInstall(false);
+      window.deferredPrompt = null;
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const installPWA = async () => {
+    if (window.deferredPrompt) {
+      window.deferredPrompt.prompt();
+      const { outcome } = await window.deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        window.deferredPrompt = null;
+        setCanInstall(false);
+      }
+    }
+  };
 
   const tabs = [
     { id: "pc", label: "Computadora", icon: "💻" },
@@ -93,6 +132,18 @@ function InstallApp() {
               </div>
             ))}
           </div>
+
+          {activeTab === 'pc' && canInstall && (
+            <div className="install-action-container">
+              <button 
+                className="install-app-btn"
+                onClick={installPWA}
+              >
+                <span className="btn-icon">⬇️</span>
+                Instalar Aplicación
+              </button>
+            </div>
+          )}
 
           <div className="install-tip">
             <span className="tip-icon">💡</span>
