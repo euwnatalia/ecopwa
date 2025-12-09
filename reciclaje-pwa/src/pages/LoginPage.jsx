@@ -22,6 +22,7 @@ function LoginPage({ setUser }) {
   const [selectedPunto, setSelectedPunto] = useState(null);
   const [selectedUserType, setSelectedUserType] = useState(null);
   const [showAppInfo, setShowAppInfo] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: API_KEY
@@ -310,6 +311,14 @@ if (showRegistration) {
 
           <p className="login-slogan">Pequeñas acciones, grandes cambios 🌍</p>
 
+          <button className="about-project-btn" onClick={() => setIsAboutOpen(true)}>
+            ℹ️ Conocé más sobre el proyecto
+          </button>
+
+          <div className="landing-footer-copyright">
+            © 2025 ReciclAR · Proyecto de tesis de Lic. Natalia Euward
+          </div>
+
           {showAppInfo && (
             <div className="app-info-modal" onClick={() => setShowAppInfo(false)}>
               <div className="app-info-content" onClick={(e) => e.stopPropagation()}>
@@ -360,6 +369,42 @@ if (showRegistration) {
 
                 <button className="modal-action-btn" onClick={() => setShowAppInfo(false)}>
                   ¡Entendido!
+                </button>
+              </div>
+            </div>
+          )}
+
+          {isAboutOpen && (
+            <div className="app-info-modal" onClick={() => setIsAboutOpen(false)}>
+              <div className="app-info-content about-modal-content" onClick={(e) => e.stopPropagation()}>
+                <button className="modal-close" onClick={() => setIsAboutOpen(false)}>×</button>
+
+                <div className="modal-header">
+                  <h3>Sobre ReciclAR ♻️</h3>
+                </div>
+
+                <div className="about-body">
+                  <p>
+                    Este proyecto nació como Tesis de la Licenciatura en Informática, pero con un propósito mayor: 
+                    ayudar a la sociedad y al medio ambiente. ReciclAR busca democratizar el acceso a la información 
+                    sobre reciclaje, conectando vecinos con puntos verdes reales para fomentar una Argentina más sustentable.
+                  </p>
+                  
+                  <div className="about-author-section">
+                    <p className="author-contact-text">¿Tenés dudas, feedback o querés contactar a la autora?</p>
+                    <a 
+                      href="https://www.linkedin.com/in/nataliaeuward/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="author-link-button"
+                    >
+                      Conectar en LinkedIn ↗
+                    </a>
+                  </div>
+                </div>
+
+                <button className="modal-action-btn" onClick={() => setIsAboutOpen(false)}>
+                  Cerrar
                 </button>
               </div>
             </div>
